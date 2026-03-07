@@ -46,3 +46,15 @@ nav:
       - Lab 25: tutorial/lab25_tunnels_and_ipsec.md
       - Lab 26: tutorial/lab26_observability_and_ops.md
       - Lab 27: tutorial/lab27_capstone_incident_drill.md
+      - Lab 28: tutorial/lab28_dhcp_snooping_and_dai.md
+      - Lab 29: tutorial/lab29_port_security_and_ip_source_guard.md
+      - Lab 30: tutorial/lab30_qos_policing_and_shaping.md
+      - Lab 31: tutorial/lab31_qos_congestion_avoidance_wred.md
+      - Lab 32: tutorial/lab32_route_redistribution_and_loop_prevention.md
+      - Lab 33: tutorial/lab33_fhrp_tracking_and_failover.md
+      - Lab 34: tutorial/lab34_ipv6_nd_slaac_and_ra_guard.md
+      - Lab 35: tutorial/lab35_ospfv3_adjacency_and_lsdb.md
+      - Lab 36: tutorial/lab36_mpbgp_ipv6_unicast.md
+      - Lab 37: tutorial/lab37_mpls_ldp_label_forwarding.md
+      - Lab 38: tutorial/lab38_l3vpn_vrf_and_route_targets.md
+      - Lab 39: tutorial/lab39_bgp_evpn_vxlan_basics.md

@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Callable, Protocol
+from typing import Callable
 
+from routeforge.labs.contracts import (
+    ArpOutcome,
+    FeatureOutcome,
+    L3Outcome,
+    LabRunResult,
+    LabStepResult,
+    OspfOutcome,
+    StpOutcome,
+    build_result,
+)
+from routeforge.labs.scenarios import build_lab_registry
 from routeforge.model.packet import ETHERTYPE_IPV4, EthernetFrame, IPv4Header
 from routeforge.runtime.dataplane_sim import DataplaneSim
 from routeforge.runtime.l3 import (
@@ -61,153 +71,6 @@ from routeforge.runtime.stp import (
 )
 
 
-class TraceableOutcome(Protocol):
-    checkpoints: tuple[str, ...]
-
-    def to_trace_record(self, *, step: str, sequence: int) -> dict[str, Any]:
-        ...
-
-
-@dataclass(frozen=True)
-class LabStepResult:
-    name: str
-    passed: bool
-    detail: str
-    outcome: TraceableOutcome
-
-
-@dataclass(frozen=True)
-class LabRunResult:
-    lab_id: str
-    passed: bool
-    steps: tuple[LabStepResult, ...]
-    checkpoints: tuple[str, ...]
-    trace_records: tuple[dict[str, Any], ...]
-
-
-@dataclass(frozen=True)
-class StpOutcome:
-    action: str
-    reason: str
-    root_node_id: str
-    port_roles: dict[tuple[str, str], str]
-    checkpoints: tuple[str, ...]
-
-    def to_trace_record(self, *, step: str, sequence: int) -> dict[str, Any]:
-        return {
-            "seq": sequence,
-            "step": step,
-            "action": self.action,
-            "reason": self.reason,
-            "root_node_id": self.root_node_id,
-            "port_roles": [f"{node}:{port}={role}" for (node, port), role in sorted(self.port_roles.items())],
-            "checkpoints": list(self.checkpoints),
-        }
-
-
-@dataclass(frozen=True)
-class ArpOutcome:
-    action: str
-    reason: str
-    next_hop_ip: str
-    checkpoints: tuple[str, ...]
-    released_packets: tuple[str, ...] = ()
-
-    def to_trace_record(self, *, step: str, sequence: int) -> dict[str, Any]:
-        return {
-            "seq": sequence,
-            "step": step,
-            "action": self.action,
-            "reason": self.reason,
-            "next_hop_ip": self.next_hop_ip,
-            "released_packets": list(self.released_packets),
-            "checkpoints": list(self.checkpoints),
-        }
-
-
-@dataclass(frozen=True)
-class L3Outcome:
-    action: str
-    reason: str
-    destination_ip: str
-    checkpoints: tuple[str, ...]
-    details: dict[str, Any]
-
-    def to_trace_record(self, *, step: str, sequence: int) -> dict[str, Any]:
-        return {
-            "seq": sequence,
-            "step": step,
-            "action": self.action,
-            "reason": self.reason,
-            "destination_ip": self.destination_ip,
-            "details": self.details,
-            "checkpoints": list(self.checkpoints),
-        }
-
-
-@dataclass(frozen=True)
-class OspfOutcome:
-    action: str
-    reason: str
-    checkpoints: tuple[str, ...]
-    details: dict[str, Any]
-
-    def to_trace_record(self, *, step: str, sequence: int) -> dict[str, Any]:
-        return {
-            "seq": sequence,
-            "step": step,
-            "action": self.action,
-            "reason": self.reason,
-            "details": self.details,
-            "checkpoints": list(self.checkpoints),
-        }
-
-
-@dataclass(frozen=True)
-class FeatureOutcome:
-    action: str
-    reason: str
-    checkpoints: tuple[str, ...]
-    details: dict[str, Any]
-
-    def to_trace_record(self, *, step: str, sequence: int) -> dict[str, Any]:
-        return {
-            "seq": sequence,
-            "step": step,
-            "action": self.action,
-            "reason": self.reason,
-            "details": self.details,
-            "checkpoints": list(self.checkpoints),
-        }
-
-
-def _unique_checkpoints(outcomes: list[TraceableOutcome]) -> tuple[str, ...]:
-    seen: set[str] = set()
-    ordered: list[str] = []
-    for outcome in outcomes:
-        for checkpoint in outcome.checkpoints:
-            if checkpoint not in seen:
-                seen.add(checkpoint)
-                ordered.append(checkpoint)
-    return tuple(ordered)
-
-
-def _result(lab_id: str, steps: list[LabStepResult]) -> LabRunResult:
-    outcomes = [step.outcome for step in steps]
-    checkpoints = _unique_checkpoints(outcomes)
-    traces = tuple(
-        step.outcome.to_trace_record(step=step.name, sequence=index + 1)
-        for index, step in enumerate(steps)
-    )
-    return LabRunResult(
-        lab_id=lab_id,
-        passed=all(step.passed for step in steps),
-        steps=tuple(steps),
-        checkpoints=checkpoints,
-        trace_records=traces,
-    )
-
-
 def _lab01() -> LabRunResult:
     router = Router(node_id="R1")
     router.add_interface(Interface(name="eth0", mode="access", access_vlan=1))
@@ -232,7 +95,7 @@ def _lab01() -> LabRunResult:
     invalid_outcome = sim.process_frame(ingress_interface="eth0", frame=invalid_frame)
     invalid_passed = invalid_outcome.action == "DROP" and "PARSE_DROP" in invalid_outcome.checkpoints
 
-    return _result(
+    return build_result(
         "lab01_frame_and_headers",
         [
             LabStepResult(
@@ -282,7 +145,7 @@ def _lab02() -> LabRunResult:
     second_ports = [frame.interface_name for frame in second.egress]
     second_passed = second.action == "FORWARD" and second_ports == ["eth0"]
 
-    return _result(
+    return build_result(
         "lab02_mac_learning_switch",
         [
             LabStepResult(
@@ -333,7 +196,7 @@ def _lab03() -> LabRunResult:
     access_tags = [frame.vlan_id for frame in to_access.egress if frame.interface_name == "eth2"]
     to_access_passed = to_access.action == "FLOOD" and access_tags == [None]
 
-    return _result(
+    return build_result(
         "lab03_vlan_and_trunks",
         [
             LabStepResult(
@@ -388,7 +251,7 @@ def _lab04() -> LabRunResult:
         and result.port_roles.get(("S3", "Gi0/1")) == "ROOT"
     )
 
-    return _result(
+    return build_result(
         "lab04_stp",
         [
             LabStepResult(
@@ -448,7 +311,7 @@ def _lab05() -> LabRunResult:
     )
     guard_passed = guard.action == "ERRDISABLE"
 
-    return _result(
+    return build_result(
         "lab05_stp_convergence_and_protection",
         [
             LabStepResult(
@@ -490,7 +353,7 @@ def _lab06() -> LabRunResult:
     )
     reply_passed = table.lookup(next_hop) == "00:de:ad:be:ef:01" and released == ["pkt-1"]
 
-    return _result(
+    return build_result(
         "lab06_arp_and_adjacency",
         [
             LabStepResult(
@@ -547,7 +410,7 @@ def _lab07() -> LabRunResult:
     )
     passed = selected is not None and selected.prefix_len == 16 and selected.out_if == "eth1"
 
-    return _result(
+    return build_result(
         "lab07_ipv4_subnet_and_rib",
         [
             LabStepResult(
@@ -598,7 +461,7 @@ def _lab08() -> LabRunResult:
     drop_outcome = _forward_outcome(drop_packet_input, decision_drop, ("FIB_DROP",))
     drop_passed = decision_drop.action == "DROP" and decision_drop.reason == "NO_ROUTE"
 
-    return _result(
+    return build_result(
         "lab08_fib_forwarding_pipeline",
         [
             LabStepResult(
@@ -656,7 +519,7 @@ def _lab09() -> LabRunResult:
     ttl_outcome = _icmp_outcome(ttl_packet, ttl_decision, "ICMP_TIME_EXCEEDED")
     ttl_passed = ttl_decision.icmp_type == "time_exceeded"
 
-    return _result(
+    return build_result(
         "lab09_icmp_and_control_responses",
         [
             LabStepResult(
@@ -717,7 +580,7 @@ def _lab10() -> LabRunResult:
     )
     assert_passed = decision.reason == "TTL_EXPIRED"
 
-    return _result(
+    return build_result(
         "lab10_ipv4_control_plane_diagnostics",
         [
             LabStepResult(
@@ -761,7 +624,7 @@ def _lab11() -> LabRunResult:
     )
     neighbor_passed = final_state == "FULL" and neighbor_state_changed(state, final_state)
 
-    return _result(
+    return build_result(
         "lab11_ospf_adjacency_fsm",
         [
             LabStepResult(
@@ -804,7 +667,7 @@ def _lab12() -> LabRunResult:
     )
     failover_passed = failover_dr == "2.2.2.2"
 
-    return _result(
+    return build_result(
         "lab12_ospf_network_types_and_dr_bdr",
         [
             LabStepResult(
@@ -863,7 +726,7 @@ def _lab13() -> LabRunResult:
     )
     age_passed = key in expired and key not in lsdb.records
 
-    return _result(
+    return build_result(
         "lab13_ospf_lsa_flooding_and_lsdb",
         [
             LabStepResult(
@@ -926,7 +789,7 @@ def _lab14() -> LabRunResult:
     )
     rib_passed = installed is not None and installed.prefix_len == 16
 
-    return _result(
+    return build_result(
         "lab14_ospf_spf_and_route_install",
         [
             LabStepResult(
@@ -982,7 +845,7 @@ def _lab15() -> LabRunResult:
     )
     install_passed = installed is not None and installed.protocol == "ospf_interarea"
 
-    return _result(
+    return build_result(
         "lab15_ospf_multi_area_abr",
         [
             LabStepResult(
@@ -1037,7 +900,7 @@ def _lab16() -> LabRunResult:
     )
     udp_passed = udp_valid
 
-    return _result(
+    return build_result(
         "lab16_udp_tcp_fundamentals",
         [
             LabStepResult(
@@ -1084,7 +947,7 @@ def _lab17() -> LabRunResult:
     )
     timeout_passed = timeout_state == "DOWN"
 
-    return _result(
+    return build_result(
         "lab17_bfd_for_liveness",
         [
             LabStepResult(
@@ -1126,7 +989,7 @@ def _lab18() -> LabRunResult:
     )
     deny_passed = deny_action == "deny"
 
-    return _result(
+    return build_result(
         "lab18_acl_pipeline",
         [
             LabStepResult(
@@ -1174,7 +1037,7 @@ def _lab19() -> LabRunResult:
     )
     expire_passed = len(expired) == 1
 
-    return _result(
+    return build_result(
         "lab19_nat44_stateful_translation",
         [
             LabStepResult(
@@ -1228,7 +1091,7 @@ def _lab20() -> LabRunResult:
     )
     dequeue_passed = packet == "pkt-voice-1" and queue == "high"
 
-    return _result(
+    return build_result(
         "lab20_qos_marking_and_queueing",
         [
             LabStepResult(
@@ -1279,7 +1142,7 @@ def _lab21() -> LabRunResult:
     )
     reset_passed = reset_state == "IDLE"
 
-    return _result(
+    return build_result(
         "lab21_bgp_session_fsm_and_transport",
         [
             LabStepResult(
@@ -1348,7 +1211,7 @@ def _lab22() -> LabRunResult:
     )
     best_passed = best.neighbor_id == "2.2.2.2"
 
-    return _result(
+    return build_result(
         "lab22_bgp_attributes_and_bestpath",
         [
             LabStepResult(
@@ -1414,7 +1277,7 @@ def _lab23() -> LabRunResult:
     )
     export_passed = all(path.local_pref == 250 for path in exported)
 
-    return _result(
+    return build_result(
         "lab23_bgp_policy_and_filters",
         [
             LabStepResult(
@@ -1488,7 +1351,7 @@ def _lab24() -> LabRunResult:
     )
     multipath_passed = multipath == ["192.0.2.21", "192.0.2.22"]
 
-    return _result(
+    return build_result(
         "lab24_bgp_scaling_patterns",
         [
             LabStepResult(
@@ -1556,7 +1419,7 @@ def _lab25() -> LabRunResult:
     )
     sa_passed = spi == 1001
 
-    return _result(
+    return build_result(
         "lab25_tunnels_and_ipsec",
         [
             LabStepResult(
@@ -1616,7 +1479,7 @@ def _lab26() -> LabRunResult:
     )
     telemetry_passed = telemetry["counters"] == {"packets_dropped": 12, "packets_forwarded": 1200}
 
-    return _result(
+    return build_result(
         "lab26_observability_and_ops",
         [
             LabStepResult(
@@ -1671,7 +1534,7 @@ def _lab27() -> LabRunResult:
     )
     assert_passed = converged and stable
 
-    return _result(
+    return build_result(
         "lab27_capstone_incident_drill",
         [
             LabStepResult(
@@ -1690,7 +1553,7 @@ def _lab27() -> LabRunResult:
     )
 
 
-LAB_RUNNERS: dict[str, Callable[[], LabRunResult]] = {
+PHASE1_RUNNERS: dict[str, Callable[[], LabRunResult]] = {
     "lab01_frame_and_headers": _lab01,
     "lab02_mac_learning_switch": _lab02,
     "lab03_vlan_and_trunks": _lab03,
@@ -1719,6 +1582,8 @@ LAB_RUNNERS: dict[str, Callable[[], LabRunResult]] = {
     "lab26_observability_and_ops": _lab26,
     "lab27_capstone_incident_drill": _lab27,
 }
+
+LAB_RUNNERS: dict[str, Callable[[], LabRunResult]] = build_lab_registry(PHASE1_RUNNERS)
 
 
 def run_lab(lab_id: str) -> LabRunResult:

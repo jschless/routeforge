@@ -6,14 +6,13 @@ import argparse
 import json
 from pathlib import Path
 import re
-import subprocess
-import sys
 
 from routeforge.debug.replay import explain_lines, load_trace, replay_lines
 from routeforge.labs.assessment import evaluate_assessment, load_assessment_rubric
 from routeforge.labs.conformance import load_conformance_matrix
 from routeforge.labs.exercises import LAB_RUNNERS, run_lab
 from routeforge.labs.manifest import LABS, get_lab, missing_prereqs
+from routeforge.labs.student_checks import run_staged_student_checks
 from routeforge.labs.student_targets import student_target_for_lab
 from routeforge.labs.progress import (
     DEFAULT_PROGRESS_PATH,
@@ -276,10 +275,8 @@ def _cmd_check(target: str) -> int:
 
     stage_max, label = stage_info
     repo_root = Path(__file__).resolve().parents[2]
-    command = [sys.executable, "-m", "pytest", "-q", "tests/student", "--stage-max", str(stage_max)]
     print(f"running staged checks: target={label} stage_max={stage_max}")
-    completed = subprocess.run(command, cwd=repo_root, check=False)
-    return completed.returncode
+    return run_staged_student_checks(stage_max=stage_max, repo_root=repo_root)
 
 
 def _feature_coverage_counts(completed: set[str], *, matrix: object, level: str) -> tuple[int, int]:

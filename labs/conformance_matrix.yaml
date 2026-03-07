@@ -9,7 +9,7 @@ levels:
 
 scope:
   addressing: IPv4
-  ipv6: OUT
+  ipv6: IN_PHASE2
   ospf: OSPFv2
   bgp: BGP-4 IPv4 unicast
 
@@ -230,6 +230,102 @@ features:
     tests: [test_conformance_capstone_incident_recovery]
     checkpoints: [SCENARIO_STEP_APPLY, CONVERGENCE_ASSERT]
 
+  - id: SEC_DHCP_SNOOP_DAI
+    domain: SECURITY
+    level: MUST
+    description: DHCP snooping binding learn and dynamic ARP inspection validation.
+    labs: [lab28_dhcp_snooping_and_dai]
+    tests: [test_conformance_sec_dhcp_snoop_dai]
+    checkpoints: [DHCP_BINDING_LEARN, DAI_VALIDATE, DAI_DROP]
+
+  - id: SEC_PORTSEC_IPSG
+    domain: SECURITY
+    level: MUST
+    description: Port-security and IP source guard enforcement.
+    labs: [lab29_port_security_and_ip_source_guard]
+    tests: [test_conformance_sec_portsec_ipsg]
+    checkpoints: [PORTSEC_LEARN, PORTSEC_VIOLATION, IPSG_DENY]
+
+  - id: QOS_POLICE_SHAPE
+    domain: QOS
+    level: MUST
+    description: QoS policing and shaping behavior.
+    labs: [lab30_qos_policing_and_shaping]
+    tests: [test_conformance_qos_police_shape]
+    checkpoints: [QOS_POLICE, QOS_SHAPE_QUEUE, QOS_SHAPE_RELEASE]
+
+  - id: QOS_WRED_CONGESTION
+    domain: QOS
+    level: MUST
+    description: WRED and ECN behavior under congestion.
+    labs: [lab31_qos_congestion_avoidance_wred]
+    tests: [test_conformance_qos_wred]
+    checkpoints: [QOS_WRED_PROFILE, QOS_ECN_MARK, QOS_WRED_DROP]
+
+  - id: RT_REDIST_LOOP_GUARD
+    domain: ROUTING
+    level: MUST
+    description: Route redistribution with loop-prevention tags.
+    labs: [lab32_route_redistribution_and_loop_prevention]
+    tests: [test_conformance_redist_loop_guard]
+    checkpoints: [REDIST_IMPORT, TAG_SET, LOOP_SUPPRESS]
+
+  - id: L3_FHRP_FAILOVER
+    domain: ROUTING
+    level: MUST
+    description: FHRP active/standby failover with object tracking.
+    labs: [lab33_fhrp_tracking_and_failover]
+    tests: [test_conformance_fhrp_failover]
+    checkpoints: [FHRP_ACTIVE_CHANGE, TRACK_DOWN, FHRP_PREEMPT]
+
+  - id: IPV6_ND_SLAAC_GUARD
+    domain: IPV6
+    level: MUST
+    description: IPv6 ND, SLAAC behavior, and RA guard enforcement.
+    labs: [lab34_ipv6_nd_slaac_and_ra_guard]
+    tests: [test_conformance_ipv6_nd_slaac_guard]
+    checkpoints: [ND_NEIGHBOR_LEARN, SLAAC_PREFIX_APPLY, RA_GUARD_DROP]
+
+  - id: OSPFV3_ADJ_LSDB
+    domain: OSPF
+    level: MUST
+    description: OSPFv3 adjacency and LSDB behavior.
+    labs: [lab35_ospfv3_adjacency_and_lsdb]
+    tests: [test_conformance_ospfv3_adj_lsdb]
+    checkpoints: [OSPFV3_HELLO_RX, OSPFV3_NEIGHBOR_FULL, OSPFV3_LSA_INSTALL]
+
+  - id: BGP_MP_IPV6_UNICAST
+    domain: BGP
+    level: MUST
+    description: MP-BGP IPv6 unicast route handling and best path.
+    labs: [lab36_mpbgp_ipv6_unicast]
+    tests: [test_conformance_bgp_mp_ipv6]
+    checkpoints: [BGP_MP_UPDATE_RX, BGP_AF_SELECT, BGP_MP_BESTPATH]
+
+  - id: MPLS_LDP_LFIB
+    domain: MPLS
+    level: MUST
+    description: LDP label allocation and LFIB forwarding decisions.
+    labs: [lab37_mpls_ldp_label_forwarding]
+    tests: [test_conformance_mpls_ldp_lfib]
+    checkpoints: [LDP_LABEL_ALLOC, LFIB_PROGRAM, MPLS_SWAP_FORWARD]
+
+  - id: MPLS_L3VPN_VRF_RT
+    domain: MPLS
+    level: MUST
+    description: VRF route-target import and VPNv4 resolution.
+    labs: [lab38_l3vpn_vrf_and_route_targets]
+    tests: [test_conformance_mpls_l3vpn_vrf_rt]
+    checkpoints: [VRF_ROUTE_INSTALL, RT_IMPORT, VPNV4_RESOLVE]
+
+  - id: EVPN_VXLAN_CONTROL
+    domain: EVPN
+    level: MUST
+    description: EVPN type-2 learning and VNI-mapped MAC/IP install behavior.
+    labs: [lab39_bgp_evpn_vxlan_basics]
+    tests: [test_conformance_evpn_vxlan]
+    checkpoints: [EVPN_TYPE2_LEARN, VNI_MAP_RESOLVE, EVPN_MAC_IP_INSTALL]
+
   - id: OSPF_AUTH_BASIC
     domain: OSPF
     level: SHOULD
@@ -379,6 +475,54 @@ lab_coverage:
     must: [CAPSTONE_INCIDENT_RECOVERY]
     should: [OSPF_AUTH_BASIC, BGP_MULTIPATH]
     out: [IPV6_STACK, MPLS_VRF_CORE, BGP_EVPN]
+  lab28_dhcp_snooping_and_dai:
+    must: [SEC_DHCP_SNOOP_DAI]
+    should: []
+    out: []
+  lab29_port_security_and_ip_source_guard:
+    must: [SEC_PORTSEC_IPSG]
+    should: []
+    out: []
+  lab30_qos_policing_and_shaping:
+    must: [QOS_POLICE_SHAPE]
+    should: []
+    out: []
+  lab31_qos_congestion_avoidance_wred:
+    must: [QOS_WRED_CONGESTION]
+    should: []
+    out: []
+  lab32_route_redistribution_and_loop_prevention:
+    must: [RT_REDIST_LOOP_GUARD]
+    should: []
+    out: []
+  lab33_fhrp_tracking_and_failover:
+    must: [L3_FHRP_FAILOVER]
+    should: []
+    out: []
+  lab34_ipv6_nd_slaac_and_ra_guard:
+    must: [IPV6_ND_SLAAC_GUARD]
+    should: []
+    out: []
+  lab35_ospfv3_adjacency_and_lsdb:
+    must: [OSPFV3_ADJ_LSDB]
+    should: []
+    out: []
+  lab36_mpbgp_ipv6_unicast:
+    must: [BGP_MP_IPV6_UNICAST]
+    should: []
+    out: []
+  lab37_mpls_ldp_label_forwarding:
+    must: [MPLS_LDP_LFIB]
+    should: []
+    out: []
+  lab38_l3vpn_vrf_and_route_targets:
+    must: [MPLS_L3VPN_VRF_RT]
+    should: []
+    out: []
+  lab39_bgp_evpn_vxlan_basics:
+    must: [EVPN_VXLAN_CONTROL]
+    should: []
+    out: []
 
 release_gate:
   v1_must_pass:
@@ -409,3 +553,15 @@ release_gate:
     - SERVICE_TUNNEL_IPSEC
     - OPS_OBSERVABILITY
     - CAPSTONE_INCIDENT_RECOVERY
+    - SEC_DHCP_SNOOP_DAI
+    - SEC_PORTSEC_IPSG
+    - QOS_POLICE_SHAPE
+    - QOS_WRED_CONGESTION
+    - RT_REDIST_LOOP_GUARD
+    - L3_FHRP_FAILOVER
+    - IPV6_ND_SLAAC_GUARD
+    - OSPFV3_ADJ_LSDB
+    - BGP_MP_IPV6_UNICAST
+    - MPLS_LDP_LFIB
+    - MPLS_L3VPN_VRF_RT
+    - EVPN_VXLAN_CONTROL
