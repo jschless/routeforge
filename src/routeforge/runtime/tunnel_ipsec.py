@@ -30,11 +30,8 @@ def decapsulate(packet: TunnelPacket) -> tuple[str, str, str]:
 
 
 def evaluate_ipsec_policy(*, destination_ip: str, protected_prefixes: tuple[str, ...]) -> str:
-    address = IPv4Address(destination_ip)
-    for prefix in protected_prefixes:
-        if address in IPv4Network(prefix, strict=False):
-            return "PROTECT"
-    return "BYPASS"
+    # TODO(student): evaluate destination against protected prefixes.
+    raise NotImplementedError("TODO: implement evaluate_ipsec_policy")
 
 
 def lookup_sa(*, sa_db: dict[str, int], peer_ip: str) -> int | None:

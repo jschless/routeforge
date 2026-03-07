@@ -17,9 +17,5 @@ def readiness_check(*, checks: dict[str, bool]) -> ReadinessResult:
 
 
 def emit_telemetry(*, component: str, counters: dict[str, int], timestamp_s: int) -> dict[str, object]:
-    ordered = {name: counters[name] for name in sorted(counters)}
-    return {
-        "component": component,
-        "timestamp_s": timestamp_s,
-        "counters": ordered,
-    }
+    # TODO(student): emit telemetry with deterministically ordered counters.
+    raise NotImplementedError("TODO: implement emit_telemetry")

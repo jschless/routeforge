@@ -52,15 +52,17 @@ class DataplaneSim:
         self.router = router
 
     def _select_known_unicast_egress(self, *, ingress_interface: str, destination_interface: str) -> tuple[list[str], str]:
-        if destination_interface == ingress_interface:
-            raise ValueError("L2_SAME_PORT_DESTINATION")
-        return [destination_interface], "L2_FDB_HIT"
+        # TODO(student): implement deterministic known-unicast forwarding selection.
+        raise NotImplementedError("TODO: implement DataplaneSim._select_known_unicast_egress")
 
     def _vlan_translation_checkpoint(self, *, ingress_vlan_id: int | None, egress_vlan_id: int | None) -> str | None:
-        if ingress_vlan_id is None and egress_vlan_id is not None:
-            return "VLAN_TAG_PUSH"
-        if ingress_vlan_id is not None and egress_vlan_id is None:
-            return "VLAN_TAG_POP"
+        # Keep no-translation paths working for earlier labs.
+        if ingress_vlan_id is None and egress_vlan_id is None:
+            return None
+        if ingress_vlan_id is not None and egress_vlan_id is not None:
+            return None
+        # TODO(student): emit VLAN_TAG_PUSH / VLAN_TAG_POP for translation paths.
+        raise NotImplementedError("TODO: implement DataplaneSim._vlan_translation_checkpoint")
         return None
 
     def process_frame(self, *, ingress_interface: str, frame: EthernetFrame) -> FrameOutcome:

@@ -39,10 +39,5 @@ class QosEngine:
         return self.default_queue.name
 
     def dequeue(self) -> tuple[str | None, str | None]:
-        packet = self.high_queue.dequeue()
-        if packet is not None:
-            return packet, self.high_queue.name
-        packet = self.default_queue.dequeue()
-        if packet is not None:
-            return packet, self.default_queue.name
-        return None, None
+        # TODO(student): dequeue with deterministic priority order.
+        raise NotImplementedError("TODO: implement QosEngine.dequeue")

@@ -18,9 +18,5 @@ class BfdSession:
         return self.state
 
     def tick(self, *, control_received: bool) -> str:
-        if control_received:
-            return self.receive_control()
-        self.missed_intervals += 1
-        if self.missed_intervals >= self.detect_mult:
-            self.state = "DOWN"
-        return self.state
+        # TODO(student): handle BFD receive vs timeout interval transitions.
+        raise NotImplementedError("TODO: implement BfdSession.tick")

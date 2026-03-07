@@ -18,8 +18,5 @@ class AclRule:
 
 
 def evaluate_acl(*, rules: list[AclRule], src_ip: str) -> str:
-    ip = IPv4Address(src_ip)
-    for rule in rules:
-        if ip in rule.network:
-            return rule.action.lower()
-    return "deny"
+    # TODO(student): evaluate ACL rules in first-match order.
+    raise NotImplementedError("TODO: implement evaluate_acl")

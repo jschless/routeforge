@@ -53,20 +53,8 @@ class Nat44Table:
         return session
 
     def inbound_translate(self, *, outside_port: int, protocol: str, now: int) -> NatSession | None:
-        session = self.sessions_by_outside.get((outside_port, protocol))
-        if session is None:
-            return None
-        updated = NatSession(
-            inside_ip=session.inside_ip,
-            inside_port=session.inside_port,
-            protocol=session.protocol,
-            outside_ip=session.outside_ip,
-            outside_port=session.outside_port,
-            last_seen=now,
-        )
-        self.sessions_by_inside[(updated.inside_ip, updated.inside_port, updated.protocol)] = updated
-        self.sessions_by_outside[(updated.outside_port, updated.protocol)] = updated
-        return updated
+        # TODO(student): perform inbound NAT session lookup and refresh.
+        raise NotImplementedError("TODO: implement Nat44Table.inbound_translate")
 
     def expire(self, *, now: int, timeout: int) -> list[NatSession]:
         expired: list[NatSession] = []

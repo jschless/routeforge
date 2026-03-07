@@ -46,6 +46,5 @@ class TcpFsm:
 
 
 def validate_udp(*, length_bytes: int, checksum_valid: bool) -> bool:
-    if length_bytes < 8:
-        return False
-    return checksum_valid
+    # TODO(student): validate UDP minimum header length and checksum.
+    raise NotImplementedError("TODO: implement validate_udp")

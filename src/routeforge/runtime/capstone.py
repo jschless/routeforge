@@ -20,16 +20,8 @@ def apply_step(
     clear_alarms: tuple[str, ...] = (),
     raise_alarms: tuple[str, ...] = (),
 ) -> ScenarioState:
-    routes = dict(state.routes)
-    routes.update(route_updates or {})
-
-    alarm_set = set(state.alarms)
-    for alarm in clear_alarms:
-        alarm_set.discard(alarm)
-    for alarm in raise_alarms:
-        alarm_set.add(alarm)
-
-    return replace(state, label=label, routes=routes, alarms=tuple(sorted(alarm_set)))
+    # TODO(student): apply deterministic scenario route/alarm state updates.
+    raise NotImplementedError("TODO: implement apply_step")
 
 
 def convergence_assert(*, state: ScenarioState, expected_routes: dict[str, str], expected_alarms: tuple[str, ...]) -> bool:

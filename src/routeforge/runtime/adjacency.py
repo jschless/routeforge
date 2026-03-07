@@ -20,6 +20,5 @@ class ArpAdjacencyTable:
         return should_send_request
 
     def resolve(self, *, next_hop_ip: str, mac: str) -> list[str]:
-        self.cache[next_hop_ip] = mac
-        released = self.pending_packets.pop(next_hop_ip, [])
-        return released
+        # TODO(student): install ARP cache entry and release pending packets.
+        raise NotImplementedError("TODO: implement ArpAdjacencyTable.resolve")

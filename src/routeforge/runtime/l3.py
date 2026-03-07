@@ -29,20 +29,8 @@ class RibTable:
         self.routes.append(route)
 
     def lookup(self, destination_ip: str) -> RouteEntry | None:
-        ip = IPv4Address(destination_ip)
-        candidates = [route for route in self.routes if ip in route.network]
-        if not candidates:
-            return None
-        return min(
-            candidates,
-            key=lambda route: (
-                -route.prefix_len,
-                route.admin_distance,
-                route.metric,
-                int(route.network.network_address),
-                route.next_hop,
-            ),
-        )
+        # TODO(student): return best route via deterministic longest-prefix match policy.
+        raise NotImplementedError("TODO: implement RibTable.lookup")
 
 
 @dataclass(frozen=True)
@@ -64,29 +52,8 @@ class ForwardingDecision:
 
 
 def forward_packet(packet: IPv4Packet, route: RouteEntry | None) -> ForwardingDecision:
-    if route is None:
-        return ForwardingDecision(
-            action="DROP",
-            reason="NO_ROUTE",
-            ttl_after=None,
-            out_if=None,
-            next_hop=None,
-        )
-    if packet.ttl <= 1:
-        return ForwardingDecision(
-            action="DROP",
-            reason="TTL_EXPIRED",
-            ttl_after=0,
-            out_if=None,
-            next_hop=None,
-        )
-    return ForwardingDecision(
-        action="FORWARD",
-        reason="FIB_HIT",
-        ttl_after=packet.ttl - 1,
-        out_if=route.out_if,
-        next_hop=route.next_hop,
-    )
+    # TODO(student): implement forwarding/drop decision with TTL behavior.
+    raise NotImplementedError("TODO: implement forward_packet")
 
 
 @dataclass(frozen=True)
@@ -97,32 +64,10 @@ class IcmpControlDecision:
 
 
 def icmp_control(packet: IPv4Packet, route: RouteEntry | None) -> IcmpControlDecision:
-    if packet.ttl <= 1:
-        return IcmpControlDecision(
-            action="GENERATE",
-            reason="TTL_EXPIRED",
-            icmp_type="time_exceeded",
-        )
-    if route is None:
-        return IcmpControlDecision(
-            action="GENERATE",
-            reason="NO_ROUTE",
-            icmp_type="unreachable",
-        )
-    if packet.protocol == "ICMP" and packet.icmp_type == "echo_request":
-        return IcmpControlDecision(
-            action="GENERATE",
-            reason="ECHO_REQUEST",
-            icmp_type="echo_reply",
-        )
-    return IcmpControlDecision(
-        action="NONE",
-        reason="NOT_APPLICABLE",
-        icmp_type="none",
-    )
+    # TODO(student): implement deterministic ICMP control-plane response logic.
+    raise NotImplementedError("TODO: implement icmp_control")
 
 
 def explain_drop(decision: ForwardingDecision) -> str:
-    if decision.action != "DROP":
-        return "forward path healthy"
-    return f"drop_reason={decision.reason}"
+    # TODO(student): explain drop decisions in a stable machine-readable string.
+    raise NotImplementedError("TODO: implement explain_drop")

@@ -57,95 +57,8 @@ def _neighbor(endpoint: PortRef, link: Link) -> PortRef:
 
 
 def compute_stp(bridges: list[Bridge], links: list[Link]) -> STPResult:
-    if not bridges:
-        raise ValueError("bridges must not be empty")
-
-    bridge_by_node = {bridge.node_id: bridge for bridge in bridges}
-    links_by_node: dict[str, list[Link]] = {bridge.node_id: [] for bridge in bridges}
-    for link in links:
-        links_by_node.setdefault(link.a.node_id, []).append(link)
-        links_by_node.setdefault(link.b.node_id, []).append(link)
-
-    root = min(bridges, key=lambda bridge: bridge.bridge_id)
-    root_node = root.node_id
-
-    root_cost: dict[str, int] = {root_node: 0}
-    root_port: dict[str, str] = {}
-
-    # Relax path choices until stable; tie-break with neighbor bridge-id and port-id.
-    for _ in range(len(bridges) * 4):
-        changed = False
-        for bridge in bridges:
-            node = bridge.node_id
-            if node == root_node:
-                continue
-            best: tuple[int, BridgeID, str, str] | None = None
-            for link in links_by_node.get(node, []):
-                if link.a.node_id == node:
-                    local = link.a
-                else:
-                    local = link.b
-                remote = _neighbor(local, link)
-                remote_cost = root_cost.get(remote.node_id)
-                if remote_cost is None:
-                    continue
-                remote_bridge_id = bridge_by_node[remote.node_id].bridge_id
-                candidate = (remote_cost + link.cost, remote_bridge_id, remote.port_id, local.port_id)
-                if best is None or candidate < best:
-                    best = candidate
-            if best is None:
-                continue
-            candidate_cost, _, _, candidate_port = best
-            if root_cost.get(node) != candidate_cost or root_port.get(node) != candidate_port:
-                root_cost[node] = candidate_cost
-                root_port[node] = candidate_port
-                changed = True
-        if not changed:
-            break
-
-    roles: dict[tuple[str, str], str] = {}
-
-    for node, port in root_port.items():
-        roles[(node, port)] = "ROOT"
-
-    for link in links:
-        a, b = link.a, link.b
-        a_vector = (
-            root_cost.get(a.node_id, 10**9),
-            bridge_by_node[a.node_id].bridge_id,
-            a.port_id,
-        )
-        b_vector = (
-            root_cost.get(b.node_id, 10**9),
-            bridge_by_node[b.node_id].bridge_id,
-            b.port_id,
-        )
-        if a_vector <= b_vector:
-            designated = a
-            other = b
-        else:
-            designated = b
-            other = a
-
-        designated_key = designated.key()
-        if roles.get(designated_key) != "ROOT":
-            roles[designated_key] = "DESIGNATED"
-
-        other_key = other.key()
-        if roles.get(other_key) is None:
-            roles[other_key] = "ALTERNATE"
-
-    for bridge in bridges:
-        for link in links_by_node.get(bridge.node_id, []):
-            local = link.a if link.a.node_id == bridge.node_id else link.b
-            roles.setdefault(local.key(), "ALTERNATE")
-
-    return STPResult(
-        root_node_id=root_node,
-        root_path_cost=root_cost,
-        root_port_by_node=root_port,
-        port_roles=roles,
-    )
+    # TODO(student): compute deterministic STP root, root ports, and roles.
+    raise NotImplementedError("TODO: implement compute_stp")
 
 
 def remove_link(links: list[Link], *, a: tuple[str, str], b: tuple[str, str]) -> list[Link]:
@@ -170,14 +83,5 @@ def role_changes(previous: STPResult, current: STPResult) -> dict[tuple[str, str
 
 
 def bpdu_guard_decision(*, port: tuple[str, str], edge_port: bool, bpdu_received: bool) -> GuardDecision:
-    if edge_port and bpdu_received:
-        return GuardDecision(
-            port=port,
-            action="ERRDISABLE",
-            reason="STP_BPDU_GUARD_TRIPPED",
-        )
-    return GuardDecision(
-        port=port,
-        action="FORWARD",
-        reason="STP_GUARD_CLEAR",
-    )
+    # TODO(student): implement BPDU guard enforcement on edge ports.
+    raise NotImplementedError("TODO: implement bpdu_guard_decision")
