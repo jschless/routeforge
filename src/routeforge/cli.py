@@ -13,7 +13,7 @@ from routeforge.labs.conformance import load_conformance_matrix
 from routeforge.labs.exercises import LAB_RUNNERS, run_lab
 from routeforge.labs.manifest import LABS, get_lab, missing_prereqs
 from routeforge.labs.student_checks import run_staged_student_checks
-from routeforge.labs.student_targets import student_target_for_lab
+from routeforge.labs.student_targets import signatures_for_target, student_target_for_lab
 from routeforge.labs.progress import (
     DEFAULT_PROGRESS_PATH,
     ProgressState,
@@ -111,9 +111,11 @@ def _cmd_show(lab_id: str) -> int:
             print("student.target: none")
         else:
             symbols = ", ".join(student_target.symbols)
+            signatures = " || ".join(signatures_for_target(student_target))
             print(f"student.stage: {student_target.stage}")
             print(f"student.target: {student_target.path}")
             print(f"student.symbols: {symbols}")
+            print(f"student.signatures: {signatures}")
             print(f"student.summary: {student_target.summary}")
         return 0
     print(f"unknown lab: {lab_id}")

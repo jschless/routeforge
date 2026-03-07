@@ -47,13 +47,27 @@ class FrameOutcome:
         }
 
 
+@dataclass(frozen=True)
+class ForwardingPlan:
+    action: str
+    reason: str
+    egress_ports: tuple[str, ...]
+    checkpoint: str
+
+
 class DataplaneSim:
     def __init__(self, router: Router) -> None:
         self.router = router
 
-    def _select_known_unicast_egress(self, *, ingress_interface: str, destination_interface: str) -> tuple[list[str], str]:
-        # TODO(student): implement deterministic known-unicast forwarding selection.
-        raise NotImplementedError("TODO: implement DataplaneSim._select_known_unicast_egress")
+    def _determine_forwarding_plan(
+        self,
+        *,
+        ingress_interface: str,
+        ingress_vlan: int,
+        destination_mac: str,
+    ) -> ForwardingPlan:
+        # TODO(student): implement deterministic L2 forwarding plan decisions.
+        raise NotImplementedError("TODO: implement DataplaneSim._determine_forwarding_plan")
 
     def _vlan_translation_checkpoint(self, *, ingress_vlan_id: int | None, egress_vlan_id: int | None) -> str | None:
         # Keep no-translation paths working for earlier labs.
@@ -106,34 +120,25 @@ class DataplaneSim:
 
         checkpoints: list[str] = ["PARSE_OK", "VLAN_CLASSIFY", "MAC_LEARN"]
 
-        destination_interface = self.router.lookup_mac(vlan=ingress_vlan, mac=destination_mac)
-        flood = destination_mac == BROADCAST_MAC or destination_interface is None
+        plan = self._determine_forwarding_plan(
+            ingress_interface=ingress_interface,
+            ingress_vlan=ingress_vlan,
+            destination_mac=destination_mac,
+        )
+        if plan.action == "DROP":
+            return FrameOutcome(
+                action="DROP",
+                reason=plan.reason,
+                ingress_interface=ingress_interface,
+                ingress_vlan=ingress_vlan,
+                egress=(),
+                checkpoints=tuple(checkpoints + [plan.checkpoint]),
+            )
 
-        if flood:
-            checkpoints.append("L2_FLOOD")
-            egress_ports = self.router.forwarding_ports(vlan=ingress_vlan, ingress_interface=ingress_interface)
-            action = "FLOOD"
-            reason = "L2_UNKNOWN_UNICAST_FLOOD" if destination_mac != BROADCAST_MAC else "L2_BROADCAST_FLOOD"
-        else:
-            assert destination_interface is not None
-            try:
-                egress_ports, reason = self._select_known_unicast_egress(
-                    ingress_interface=ingress_interface,
-                    destination_interface=destination_interface,
-                )
-            except ValueError as exc:
-                if str(exc) != "L2_SAME_PORT_DESTINATION":
-                    raise
-                return FrameOutcome(
-                    action="DROP",
-                    reason="L2_SAME_PORT_DESTINATION",
-                    ingress_interface=ingress_interface,
-                    ingress_vlan=ingress_vlan,
-                    egress=(),
-                    checkpoints=tuple(checkpoints + ["PARSE_DROP"]),
-                )
-            checkpoints.append("L2_UNICAST_FORWARD")
-            action = "FORWARD"
+        checkpoints.append(plan.checkpoint)
+        egress_ports = list(plan.egress_ports)
+        action = plan.action
+        reason = plan.reason
 
         outgoing_frames: list[EgressFrame] = []
         for port_name in egress_ports:

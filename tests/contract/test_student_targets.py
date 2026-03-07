@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from routeforge.labs.exercises import LAB_RUNNERS
-from routeforge.labs.student_targets import load_student_targets
+from routeforge.labs.student_targets import load_student_targets, signatures_for_target
 
 
 def test_student_targets_cover_every_lab() -> None:
@@ -13,3 +13,9 @@ def test_student_targets_have_contiguous_stage_numbers() -> None:
     targets = load_student_targets()
     stages = sorted(target.stage for target in targets.values())
     assert stages == list(range(1, len(LAB_RUNNERS) + 1))
+
+
+def test_student_target_signatures_are_rendered() -> None:
+    targets = load_student_targets()
+    sigs = signatures_for_target(targets["lab01_frame_and_headers"])
+    assert any("is_valid_mac" in sig for sig in sigs)

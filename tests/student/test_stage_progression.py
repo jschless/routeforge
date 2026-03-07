@@ -6,6 +6,9 @@ from routeforge.labs.conformance import load_conformance_matrix
 from routeforge.labs.exercises import run_lab
 from routeforge.labs.manifest import LABS
 from routeforge.model.packet import ETHERTYPE_IPV4, EthernetFrame, IPv4Header, is_valid_mac
+from routeforge.runtime.dataplane_sim import DataplaneSim
+from routeforge.runtime.interface import Interface
+from routeforge.runtime.router import Router
 
 
 def _required_checkpoints_for_lab(lab_id: str) -> set[str]:
@@ -47,6 +50,45 @@ def test_stage01_edge_mac_and_ipv4_validation() -> None:
     errors = invalid.validate()
     assert "L3_INVALID_DST_IP" in errors
     assert "L3_INVALID_TTL" in errors
+
+
+@pytest.mark.stage(2)
+def test_stage02_forwarding_plan_decisions() -> None:
+    router = Router(node_id="R1")
+    router.add_interface(Interface(name="eth0", mode="access", access_vlan=1))
+    router.add_interface(Interface(name="eth1", mode="access", access_vlan=1))
+    router.add_interface(Interface(name="eth2", mode="access", access_vlan=1))
+    sim = DataplaneSim(router)
+
+    unknown = sim._determine_forwarding_plan(
+        ingress_interface="eth0",
+        ingress_vlan=1,
+        destination_mac="00:bb:00:00:00:01",
+    )
+    assert unknown.action == "FLOOD"
+    assert unknown.reason == "L2_UNKNOWN_UNICAST_FLOOD"
+    assert unknown.checkpoint == "L2_FLOOD"
+    assert set(unknown.egress_ports) == {"eth1", "eth2"}
+
+    router.learn_mac(vlan=1, mac="00:cc:00:00:00:01", interface_name="eth1")
+    known = sim._determine_forwarding_plan(
+        ingress_interface="eth0",
+        ingress_vlan=1,
+        destination_mac="00:cc:00:00:00:01",
+    )
+    assert known.action == "FORWARD"
+    assert known.reason == "L2_FDB_HIT"
+    assert known.checkpoint == "L2_UNICAST_FORWARD"
+    assert known.egress_ports == ("eth1",)
+
+    same_port = sim._determine_forwarding_plan(
+        ingress_interface="eth1",
+        ingress_vlan=1,
+        destination_mac="00:cc:00:00:00:01",
+    )
+    assert same_port.action == "DROP"
+    assert same_port.reason == "L2_SAME_PORT_DESTINATION"
+    assert same_port.checkpoint == "PARSE_DROP"
 
 
 @pytest.mark.parametrize(
