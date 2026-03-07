@@ -26,7 +26,8 @@ class DrCandidate:
 
 
 def _election_order(candidates: list[DrCandidate]) -> list[DrCandidate]:
-    return sorted(candidates, key=lambda candidate: (candidate.priority, candidate.router_id), reverse=True)
+    # TODO(student): order candidates by priority and router ID for deterministic DR/BDR election.
+    raise NotImplementedError("TODO: implement _election_order")
 
 
 def elect_dr_bdr(candidates: list[DrCandidate]) -> tuple[str, str | None]:

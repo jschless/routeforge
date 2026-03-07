@@ -14,10 +14,8 @@ class ArpAdjacencyTable:
         return self.cache.get(ip)
 
     def queue_packet(self, *, next_hop_ip: str, packet_id: str) -> bool:
-        queue = self.pending_packets.setdefault(next_hop_ip, [])
-        should_send_request = len(queue) == 0 and next_hop_ip not in self.cache
-        queue.append(packet_id)
-        return should_send_request
+        # TODO(student): queue packets and return whether ARP resolution should be started.
+        raise NotImplementedError("TODO: implement ArpAdjacencyTable.queue_packet")
 
     def resolve(self, *, next_hop_ip: str, mac: str) -> list[str]:
         # TODO(student): install ARP cache entry and release pending packets.

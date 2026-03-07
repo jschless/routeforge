@@ -12,8 +12,8 @@ class ReadinessResult:
 
 
 def readiness_check(*, checks: dict[str, bool]) -> ReadinessResult:
-    failed = tuple(name for name, passed in sorted(checks.items()) if not passed)
-    return ReadinessResult(ready=not failed, failed_checks=failed)
+    # TODO(student): derive readiness and failed checks in deterministic order.
+    raise NotImplementedError("TODO: implement readiness_check")
 
 
 def emit_telemetry(*, component: str, counters: dict[str, int], timestamp_s: int) -> dict[str, object]:

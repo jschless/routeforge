@@ -15,13 +15,8 @@ class FlowKey:
 
 
 def classify_flow(*, src_ip: str, dst_ip: str, src_port: int, dst_port: int, protocol: str) -> FlowKey:
-    return FlowKey(
-        src_ip=src_ip,
-        dst_ip=dst_ip,
-        src_port=src_port,
-        dst_port=dst_port,
-        protocol=protocol.upper(),
-    )
+    # TODO(student): normalize protocol and build a deterministic flow key.
+    raise NotImplementedError("TODO: implement classify_flow")
 
 
 @dataclass
