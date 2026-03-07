@@ -138,17 +138,19 @@ def _ordered_completed(completed: set[str]) -> tuple[str, ...]:
 
 
 def _badge_set(completed: set[str]) -> tuple[str, ...]:
-    automation = {entry["id"] for entry in TDL_CHALLENGES if entry["domain"] == "AUTOMATION" and entry["kind"] == "mission"}
-    multicast = {entry["id"] for entry in TDL_CHALLENGES if entry["domain"] == "MULTICAST" and entry["kind"] == "mission"}
-    wireless = {entry["id"] for entry in TDL_CHALLENGES if entry["domain"] == "WIRELESS" and entry["kind"] == "mission"}
+    missions_by_domain: dict[str, set[str]] = {}
+    for entry in TDL_CHALLENGES:
+        if entry["kind"] != "mission":
+            continue
+        domain = entry["domain"]
+        missions_by_domain.setdefault(domain, set()).add(entry["id"])
+
     all_ids = {entry["id"] for entry in TDL_CHALLENGES}
     badges: list[str] = []
-    if automation <= completed:
-        badges.append("automation_complete")
-    if multicast <= completed:
-        badges.append("multicast_complete")
-    if wireless <= completed:
-        badges.append("wireless_complete")
+    for domain in sorted(missions_by_domain):
+        mission_ids = missions_by_domain[domain]
+        if mission_ids <= completed:
+            badges.append(f"{domain.lower()}_complete")
     if all_ids <= completed:
         badges.append("tdl_master")
     return tuple(badges)

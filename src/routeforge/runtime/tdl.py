@@ -135,3 +135,164 @@ def wireless_incident_triage(
     """Return dominant root-cause classification for wireless incident signal."""
     # TODO(student): classify incident cause with deterministic precedence ordering.
     raise NotImplementedError("TODO: implement wireless_incident_triage")
+
+
+def prefix_list_match(
+    *,
+    prefix: str,
+    rules: list[tuple[str, str, int | None, int | None]],
+) -> tuple[str, str]:
+    """Evaluate prefix-list style rules and return PERMIT/DENY decision."""
+    # TODO(student): apply ordered rules with subnet + ge/le matching and default deny.
+    raise NotImplementedError("TODO: implement prefix_list_match")
+
+
+def route_map_eval(
+    *,
+    route: dict[str, object],
+    sequences: list[tuple[int, str, bool]],
+) -> tuple[str, int | str]:
+    """Evaluate route-map sequence matches in deterministic sequence order."""
+    # TODO(student): return first matching sequence action, else implicit deny.
+    raise NotImplementedError("TODO: implement route_map_eval")
+
+
+def community_policy_apply(
+    *,
+    current: set[str],
+    operation: str,
+    values: set[str],
+) -> set[str]:
+    """Apply add/remove/replace operations to BGP communities."""
+    # TODO(student): implement ADD/REMOVE/REPLACE community actions.
+    raise NotImplementedError("TODO: implement community_policy_apply")
+
+
+def attribute_policy_transform(
+    *,
+    local_pref: int,
+    med: int,
+    policy: dict[str, int],
+) -> tuple[int, int]:
+    """Apply optional local-pref and MED policy overrides."""
+    # TODO(student): override only policy-provided fields and preserve others.
+    raise NotImplementedError("TODO: implement attribute_policy_transform")
+
+
+def policy_pipeline_decision(
+    *,
+    prefix: str,
+    prefix_rules: list[tuple[str, str, int | None, int | None]],
+    route_map_sequences: list[tuple[int, str, bool]],
+    communities: set[str],
+    community_operation: str,
+    community_values: set[str],
+    local_pref: int,
+    med: int,
+    attr_policy: dict[str, int],
+) -> tuple[str, str | dict[str, object]]:
+    """Run a deterministic routing policy pipeline over one route."""
+    # TODO(student): combine prefix-list, route-map, community, and attribute policy stages.
+    raise NotImplementedError("TODO: implement policy_pipeline_decision")
+
+
+def ldp_label_allocate(
+    *,
+    fec: str,
+    bindings: dict[str, int],
+    start_label: int = 16000,
+) -> tuple[dict[str, int], int]:
+    """Allocate deterministic LDP labels with stable reuse for existing FECs."""
+    # TODO(student): reuse labels for known FECs and allocate monotonically for new FECs.
+    raise NotImplementedError("TODO: implement ldp_label_allocate")
+
+
+def mpls_forward_action(
+    *,
+    incoming_labeled: bool,
+    penultimate_hop: bool,
+    outgoing_label: int | None,
+) -> tuple[str, int | None]:
+    """Return PUSH/SWAP/POP/DROP action for MPLS forwarding stage."""
+    # TODO(student): derive deterministic action from ingress label state and hop role.
+    raise NotImplementedError("TODO: implement mpls_forward_action")
+
+
+def vrf_rt_import_export(
+    *,
+    import_rts: set[str],
+    export_rts: set[str],
+    route_rt: str,
+    direction: str,
+) -> tuple[str, str]:
+    """Return IMPORT/EXPORT/REJECT action for route-target policy."""
+    # TODO(student): evaluate route-target action for IMPORT or EXPORT direction.
+    raise NotImplementedError("TODO: implement vrf_rt_import_export")
+
+
+def vpnv4_install_decision(*, next_hop_reachable: bool, rt_action: str) -> tuple[str, str]:
+    """Return INSTALL/SUPPRESS decision for VPNv4 route install gate."""
+    # TODO(student): install only when next-hop is reachable and RT action permits import.
+    raise NotImplementedError("TODO: implement vpnv4_install_decision")
+
+
+def l3vpn_trace_forward(
+    *,
+    next_hop_reachable: bool,
+    import_rts: set[str],
+    route_rt: str,
+    incoming_labeled: bool,
+    penultimate_hop: bool,
+    outgoing_label: int | None,
+) -> tuple[str, tuple[str, ...] | str]:
+    """Trace L3VPN import/install/forward stages with deterministic failure reason."""
+    # TODO(student): enforce first-failure precedence and emit deterministic trace checkpoints.
+    raise NotImplementedError("TODO: implement l3vpn_trace_forward")
+
+
+def hsrp_priority_recompute(*, base_priority: int, track_decrement: int, tracked_object_up: bool) -> int:
+    """Recompute HSRP priority from tracking object health."""
+    # TODO(student): decrement HSRP priority only when tracked object is down.
+    raise NotImplementedError("TODO: implement hsrp_priority_recompute")
+
+
+def bfd_flap_dampening(
+    *,
+    flap_count: int,
+    suppress_threshold: int,
+    hold_down_seconds: int,
+    elapsed_seconds: int,
+) -> tuple[str, int]:
+    """Return SUPPRESS/UNSUPPRESS state with remaining hold-down seconds."""
+    # TODO(student): apply flap threshold and hold timer to suppression state.
+    raise NotImplementedError("TODO: implement bfd_flap_dampening")
+
+
+def isis_lsp_pacing(
+    *,
+    queued_lsps: tuple[str, ...],
+    tokens: int,
+    replenish: int,
+    bucket_max: int,
+) -> tuple[tuple[str, ...], tuple[str, ...], int]:
+    """Send queued IS-IS LSPs based on deterministic token bucket pacing."""
+    # TODO(student): compute available tokens, sent LSPs, remaining queue, and token remainder.
+    raise NotImplementedError("TODO: implement isis_lsp_pacing")
+
+
+def gr_stale_path_action(*, stale_seconds_remaining: int) -> tuple[str, int]:
+    """Return RETAIN_STALE or FLUSH_STALE based on stale-route timer."""
+    # TODO(student): retain stale paths while timer remains, flush when expired.
+    raise NotImplementedError("TODO: implement gr_stale_path_action")
+
+
+def control_plane_stability_triage(
+    *,
+    hsrp_priority: int,
+    hsrp_min_priority: int,
+    bfd_state: str,
+    stale_state: str,
+) -> tuple[str, str]:
+    """Classify control-plane stability incident severity deterministically."""
+    # TODO(student): classify severity from BFD suppression, stale-state, and HSRP health.
+    raise NotImplementedError("TODO: implement control_plane_stability_triage")

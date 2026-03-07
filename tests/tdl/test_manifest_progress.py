@@ -45,6 +45,9 @@ def test_tdl_progress_round_trip_and_unlocks(tmp_path) -> None:
         "tdl_auto_01_yang_path_validation",
         "tdl_mcast_01_rpf_check",
         "tdl_wlan_01_client_join_state_machine",
+        "tdl_route_01_prefix_list_match",
+        "tdl_mpls_01_ldp_label_allocation",
+        "tdl_res_01_hsrp_priority_tracking",
     )
 
     state = apply_tdl_run_result(
@@ -81,8 +84,11 @@ def test_tdl_badges_and_master_completion() -> None:
 
     assert state.total_xp == sum(entry["xp"] for entry in TDL_CHALLENGES)
     assert "automation_complete" in state.badges
+    assert "routing_complete" in state.badges
+    assert "mpls_complete" in state.badges
     assert "multicast_complete" in state.badges
     assert "wireless_complete" in state.badges
+    assert "resiliency_complete" in state.badges
     assert "tdl_master" in state.badges
 
 

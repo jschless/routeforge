@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from routeforge.cli import main
+from routeforge.tdl.manifest import TDL_CHALLENGES
 
 
 def test_tdl_list_and_show_commands(capsys) -> None:
@@ -30,7 +31,7 @@ def test_tdl_run_updates_progress_and_xp(capsys, tmp_path) -> None:
 
     assert main(["tdl", "progress", "show", "--state-file", str(state)]) == 0
     show_output = capsys.readouterr().out
-    assert "tdl.completed: 1/15" in show_output
+    assert f"tdl.completed: 1/{len(TDL_CHALLENGES)}" in show_output
     assert "tdl.xp: 100" in show_output
 
 

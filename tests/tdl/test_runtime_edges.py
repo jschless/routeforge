@@ -3,19 +3,34 @@ from __future__ import annotations
 import pytest
 
 from routeforge.runtime.tdl import (
+    attribute_policy_transform,
+    bfd_flap_dampening,
     channel_conflict_score,
     client_join_fsm,
     closed_loop_remediation,
+    community_policy_apply,
+    control_plane_stability_triage,
     config_drift_diff,
+    gr_stale_path_action,
+    hsrp_priority_recompute,
     igmp_snooping_membership,
+    isis_lsp_pacing,
+    l3vpn_trace_forward,
+    ldp_label_allocate,
     multicast_tree_forward,
+    mpls_forward_action,
     netconf_edit_merge_replace,
+    policy_pipeline_decision,
     pim_dr_election,
+    prefix_list_match,
     restconf_patch_idempotence,
     roaming_decision,
+    route_map_eval,
     rp_mapping,
     rpf_check,
     validate_yang_path,
+    vpnv4_install_decision,
+    vrf_rt_import_export,
     wireless_incident_triage,
     wmm_queue_map,
 )
@@ -132,3 +147,206 @@ def test_wireless_incident_triage_preserves_reason_precedence() -> None:
         )
         == "AUTH_FAILURE"
     )
+
+
+@pytest.mark.tdl("tdl_route_01_prefix_list_match")
+def test_prefix_list_match_ge_le_bounds() -> None:
+    assert prefix_list_match(
+        prefix="10.1.1.0/24",
+        rules=[("PERMIT", "10.0.0.0/8", 24, 24)],
+    ) == ("PERMIT", "RULE_MATCH")
+    assert prefix_list_match(
+        prefix="10.1.1.0/25",
+        rules=[("PERMIT", "10.0.0.0/8", 24, 24)],
+    ) == ("DENY", "NO_MATCH")
+
+
+@pytest.mark.tdl("tdl_route_02_route_map_sequence_eval")
+def test_route_map_eval_first_match_and_implicit_deny() -> None:
+    assert route_map_eval(
+        route={"prefix": "10.1.1.0/24"},
+        sequences=[(10, "DENY", True), (20, "PERMIT", True)],
+    ) == ("DENY", 10)
+    assert route_map_eval(
+        route={"prefix": "10.1.1.0/24"},
+        sequences=[(10, "PERMIT", False)],
+    ) == ("DENY", "IMPLICIT_DENY")
+
+
+@pytest.mark.tdl("tdl_route_03_bgp_community_policy")
+def test_community_policy_apply_add_and_replace() -> None:
+    added = community_policy_apply(
+        current={"65000:1"},
+        operation="ADD",
+        values={"65000:1", "65000:100"},
+    )
+    assert added == {"65000:1", "65000:100"}
+    assert community_policy_apply(
+        current=added,
+        operation="REPLACE",
+        values={"65000:200"},
+    ) == {"65000:200"}
+
+
+@pytest.mark.tdl("tdl_route_04_local_pref_and_med_policy")
+def test_attribute_policy_transform_override_and_preserve() -> None:
+    assert attribute_policy_transform(
+        local_pref=100,
+        med=20,
+        policy={"local_pref": 200, "med": 50},
+    ) == (200, 50)
+    assert attribute_policy_transform(local_pref=100, med=20, policy={}) == (100, 20)
+
+
+@pytest.mark.tdl("tdl_route_boss_policy_pipeline_debug")
+def test_policy_pipeline_decision_drop_and_advertise_paths() -> None:
+    assert policy_pipeline_decision(
+        prefix="192.0.2.0/24",
+        prefix_rules=[("PERMIT", "10.0.0.0/8", 24, 24)],
+        route_map_sequences=[(10, "PERMIT", True)],
+        communities=set(),
+        community_operation="ADD",
+        community_values={"65000:100"},
+        local_pref=100,
+        med=20,
+        attr_policy={"local_pref": 200, "med": 50},
+    ) == ("DROP", "PREFIX_DENY")
+
+    action, payload = policy_pipeline_decision(
+        prefix="10.1.1.0/24",
+        prefix_rules=[("PERMIT", "10.0.0.0/8", 24, 24)],
+        route_map_sequences=[(10, "PERMIT", True)],
+        communities=set(),
+        community_operation="ADD",
+        community_values={"65000:100"},
+        local_pref=100,
+        med=20,
+        attr_policy={"local_pref": 200, "med": 50},
+    )
+    assert action == "ADVERTISE"
+    assert payload == {"communities": ("65000:100",), "local_pref": 200, "med": 50}
+
+
+@pytest.mark.tdl("tdl_mpls_01_ldp_label_allocation")
+def test_ldp_label_allocate_new_and_reused_fec() -> None:
+    bindings, first = ldp_label_allocate(fec="10.0.0.0/24", bindings={})
+    assert first == 16000
+    reused_bindings, reused = ldp_label_allocate(fec="10.0.0.0/24", bindings=bindings)
+    assert reused == 16000
+    assert reused_bindings == bindings
+
+
+@pytest.mark.tdl("tdl_mpls_02_php_forwarding_decision")
+def test_mpls_forward_action_pop_and_swap() -> None:
+    assert mpls_forward_action(
+        incoming_labeled=True,
+        penultimate_hop=True,
+        outgoing_label=3,
+    ) == ("POP", None)
+    assert mpls_forward_action(
+        incoming_labeled=True,
+        penultimate_hop=False,
+        outgoing_label=24000,
+    ) == ("SWAP", 24000)
+
+
+@pytest.mark.tdl("tdl_mpls_03_l3vpn_rt_import_export")
+def test_vrf_rt_import_export_import_and_reject() -> None:
+    assert vrf_rt_import_export(
+        import_rts={"65000:100"},
+        export_rts=set(),
+        route_rt="65000:100",
+        direction="IMPORT",
+    ) == ("IMPORT", "65000:100")
+    assert vrf_rt_import_export(
+        import_rts={"65000:100"},
+        export_rts=set(),
+        route_rt="65000:200",
+        direction="IMPORT",
+    ) == ("REJECT", "65000:200")
+
+
+@pytest.mark.tdl("tdl_mpls_04_vpnv4_next_hop_reachability")
+def test_vpnv4_install_decision_install_and_suppress() -> None:
+    assert vpnv4_install_decision(next_hop_reachable=True, rt_action="IMPORT") == ("INSTALL", "NH_REACHABLE")
+    assert vpnv4_install_decision(next_hop_reachable=False, rt_action="IMPORT") == ("SUPPRESS", "NH_UNREACHABLE")
+
+
+@pytest.mark.tdl("tdl_mpls_boss_l3vpn_data_plane_trace")
+def test_l3vpn_trace_forward_happy_and_failure_paths() -> None:
+    assert l3vpn_trace_forward(
+        next_hop_reachable=True,
+        import_rts={"65000:100"},
+        route_rt="65000:100",
+        incoming_labeled=True,
+        penultimate_hop=False,
+        outgoing_label=24000,
+    ) == ("FORWARD", ("RT_IMPORT", "VPN_INSTALL", "MPLS_SWAP", "LABEL_24000"))
+    assert l3vpn_trace_forward(
+        next_hop_reachable=False,
+        import_rts={"65000:100"},
+        route_rt="65000:100",
+        incoming_labeled=True,
+        penultimate_hop=False,
+        outgoing_label=24000,
+    ) == ("DROP", "NH_UNREACHABLE")
+
+
+@pytest.mark.tdl("tdl_res_01_hsrp_priority_tracking")
+def test_hsrp_priority_recompute_for_track_state() -> None:
+    assert hsrp_priority_recompute(base_priority=110, track_decrement=20, tracked_object_up=False) == 90
+    assert hsrp_priority_recompute(base_priority=110, track_decrement=20, tracked_object_up=True) == 110
+
+
+@pytest.mark.tdl("tdl_res_02_bfd_flap_dampening")
+def test_bfd_flap_dampening_suppress_and_unsuppress() -> None:
+    assert bfd_flap_dampening(
+        flap_count=5,
+        suppress_threshold=3,
+        hold_down_seconds=30,
+        elapsed_seconds=10,
+    ) == ("SUPPRESS", 20)
+    assert bfd_flap_dampening(
+        flap_count=5,
+        suppress_threshold=3,
+        hold_down_seconds=30,
+        elapsed_seconds=30,
+    ) == ("UNSUPPRESS", 0)
+
+
+@pytest.mark.tdl("tdl_res_03_isis_lsp_pacing")
+def test_isis_lsp_pacing_sends_only_when_tokens_available() -> None:
+    assert isis_lsp_pacing(
+        queued_lsps=("lsp1", "lsp2", "lsp3"),
+        tokens=1,
+        replenish=1,
+        bucket_max=2,
+    ) == (("lsp1", "lsp2"), ("lsp3",), 0)
+    assert isis_lsp_pacing(
+        queued_lsps=("lsp1",),
+        tokens=0,
+        replenish=0,
+        bucket_max=2,
+    ) == ((), ("lsp1",), 0)
+
+
+@pytest.mark.tdl("tdl_res_04_graceful_restart_stale_timer")
+def test_gr_stale_path_action_retain_and_flush() -> None:
+    assert gr_stale_path_action(stale_seconds_remaining=15) == ("RETAIN_STALE", 15)
+    assert gr_stale_path_action(stale_seconds_remaining=0) == ("FLUSH_STALE", 0)
+
+
+@pytest.mark.tdl("tdl_res_boss_control_plane_stability_incident")
+def test_control_plane_stability_triage_critical_and_healthy() -> None:
+    assert control_plane_stability_triage(
+        hsrp_priority=90,
+        hsrp_min_priority=100,
+        bfd_state="SUPPRESS",
+        stale_state="FLUSH_STALE",
+    ) == ("CRITICAL", "CONTROL_PLANE_UNSTABLE")
+    assert control_plane_stability_triage(
+        hsrp_priority=110,
+        hsrp_min_priority=100,
+        bfd_state="UNSUPPRESS",
+        stale_state="RETAIN_STALE",
+    ) == ("HEALTHY", "STABLE")
