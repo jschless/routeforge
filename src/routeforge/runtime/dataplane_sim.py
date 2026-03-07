@@ -51,6 +51,18 @@ class DataplaneSim:
     def __init__(self, router: Router) -> None:
         self.router = router
 
+    def _select_known_unicast_egress(self, *, ingress_interface: str, destination_interface: str) -> tuple[list[str], str]:
+        if destination_interface == ingress_interface:
+            raise ValueError("L2_SAME_PORT_DESTINATION")
+        return [destination_interface], "L2_FDB_HIT"
+
+    def _vlan_translation_checkpoint(self, *, ingress_vlan_id: int | None, egress_vlan_id: int | None) -> str | None:
+        if ingress_vlan_id is None and egress_vlan_id is not None:
+            return "VLAN_TAG_PUSH"
+        if ingress_vlan_id is not None and egress_vlan_id is None:
+            return "VLAN_TAG_POP"
+        return None
+
     def process_frame(self, *, ingress_interface: str, frame: EthernetFrame) -> FrameOutcome:
         iface = self.router.get_interface(ingress_interface)
         if iface is None:
@@ -101,7 +113,15 @@ class DataplaneSim:
             action = "FLOOD"
             reason = "L2_UNKNOWN_UNICAST_FLOOD" if destination_mac != BROADCAST_MAC else "L2_BROADCAST_FLOOD"
         else:
-            if destination_interface == ingress_interface:
+            assert destination_interface is not None
+            try:
+                egress_ports, reason = self._select_known_unicast_egress(
+                    ingress_interface=ingress_interface,
+                    destination_interface=destination_interface,
+                )
+            except ValueError as exc:
+                if str(exc) != "L2_SAME_PORT_DESTINATION":
+                    raise
                 return FrameOutcome(
                     action="DROP",
                     reason="L2_SAME_PORT_DESTINATION",
@@ -110,10 +130,8 @@ class DataplaneSim:
                     egress=(),
                     checkpoints=tuple(checkpoints + ["PARSE_DROP"]),
                 )
-            egress_ports = [destination_interface]
             checkpoints.append("L2_UNICAST_FORWARD")
             action = "FORWARD"
-            reason = "L2_FDB_HIT"
 
         outgoing_frames: list[EgressFrame] = []
         for port_name in egress_ports:
@@ -123,10 +141,12 @@ class DataplaneSim:
             outgoing_vlan, allowed = port.egress_vlan(ingress_vlan)
             if not allowed:
                 continue
-            if frame.vlan_id is None and outgoing_vlan is not None and "VLAN_TAG_PUSH" not in checkpoints:
-                checkpoints.append("VLAN_TAG_PUSH")
-            if frame.vlan_id is not None and outgoing_vlan is None and "VLAN_TAG_POP" not in checkpoints:
-                checkpoints.append("VLAN_TAG_POP")
+            translation_checkpoint = self._vlan_translation_checkpoint(
+                ingress_vlan_id=frame.vlan_id,
+                egress_vlan_id=outgoing_vlan,
+            )
+            if translation_checkpoint is not None and translation_checkpoint not in checkpoints:
+                checkpoints.append(translation_checkpoint)
             outgoing_frames.append(
                 EgressFrame(
                     interface_name=port_name,

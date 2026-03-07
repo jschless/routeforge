@@ -88,13 +88,19 @@ Student loop:
 
 1. `git switch student`
 2. edit the real source file for the current lab (for Lab 1: `src/routeforge/model/packet.py`)
-3. run staged tests:
+3. confirm the exact file/function target:
+
+```bash
+routeforge show lab01_frame_and_headers
+```
+
+4. run staged tests:
 
 ```bash
 routeforge check lab01
 ```
 
-4. when green, move to the next stage:
+5. when green, move to the next stage:
 
 ```bash
 routeforge check lab02
@@ -107,6 +113,8 @@ routeforge check all
 ```
 
 should pass.
+
+Use [student_task_map.md](student_task_map.md) for the full lab-by-lab target list.
 
 ## How To Read Lab Output
 
