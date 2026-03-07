@@ -62,7 +62,7 @@ routeforge debug explain --trace /tmp/lab07_ipv4_subnet_and_rib.jsonl --step rib
 
 Checkpoint guide:
 
-- `RIB_ROUTE_INSTALL`: Connected/static route install and deterministic LPM selection.; Deterministic SPF, ECMP policy, and route installation.
+- `RIB_ROUTE_INSTALL`: Connected/static route install and deterministic LPM selection.
 - `ROUTE_LOOKUP`: Connected/static route install and deterministic LPM selection.
 - `ROUTE_SELECT`: Connected/static route install and deterministic LPM selection.
 
@@ -78,4 +78,3 @@ Checkpoint guide:
 - RFC 791 (IPv4).
 - RFC 792 (ICMP).
 - RFC 826 (ARP).
-
