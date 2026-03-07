@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `mpls_ldp_lfib` in `src/routeforge/runtime/phase2.py`.
+- Implement `lfib_mapping, mpls_ldp_lfib` in `src/routeforge/runtime/phase2.py`.
 - Deliver `ldp_label_alloc`: LDP allocates local label for FEC.
 - Deliver `lfib_program`: LFIB programs outgoing label mapping.
 - Deliver `mpls_swap_forward`: label swap forwarding path executes deterministically.
@@ -16,22 +16,29 @@
 
 ## Concept walkthrough
 
-Label distribution and LFIB programming for MPLS forwarding. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`mpls_ldp_lfib`).
+Label distribution and LFIB programming for MPLS forwarding. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`lfib_mapping, mpls_ldp_lfib`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/phase2.py`
-- Symbol: `mpls_ldp_lfib`
-- Why this target: implement the core behavior required by the three lab steps.
+- Symbols: `lfib_mapping, mpls_ldp_lfib`
+- Why this target: define LFIB tuple builder and route forwarding function through same mapping contract.
 - Stage check: `routeforge check lab37`
+
+Function contract for this stage:
+
+- Symbol: `lfib_mapping(*, fec: str, local_label: int, outgoing_label: int) -> tuple[str, int, int]`
+- Required behavior: return deterministic LFIB tuple in `(FEC, local, outgoing)` order
+- Symbol: `mpls_ldp_lfib(*, fec: str, local_label: int, outgoing_label: int) -> tuple[str, int, int]`
+- Required behavior: call LFIB mapping contract and return identical tuple format
 
 Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab37_mpls_ldp_label_forwarding`
-3. Edit only `mpls_ldp_lfib` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `lfib_mapping, mpls_ldp_lfib` in `src/routeforge/runtime/phase2.py`.
 4. Run `routeforge check lab37` until it exits with status `0`.
 5. Run `routeforge run lab37_mpls_ldp_label_forwarding --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -72,7 +79,7 @@ Checkpoint guide:
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `mpls_ldp_lfib` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab37` to confirm tests catch regressions.
+- Intentionally break `lfib_mapping` or `mpls_ldp_lfib` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab37` to confirm tests catch regressions.
 - If `routeforge run lab37_mpls_ldp_label_forwarding --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.

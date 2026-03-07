@@ -202,82 +202,94 @@ targets:
     stage: 28
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - learn_binding_if_trusted
       - dhcp_snooping_dai
-    summary: Learn DHCP snooping bindings and enforce dynamic ARP inspection.
+    summary: Learn trusted DHCP bindings and enforce deterministic DAI validation.
 
   - lab_id: lab29_port_security_and_ip_source_guard
     stage: 29
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - update_secure_mac_table
       - port_security_ip_source_guard
-    summary: Enforce secure-MAC limits and source-IP guard policy.
+    summary: Update secure-MAC learning state and apply IP source guard outcomes.
 
   - lab_id: lab30_qos_policing_and_shaping
     stage: 30
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - apply_policer
       - qos_police_shape
-    summary: Model deterministic policing and shaping behavior.
+    summary: Apply CIR policing first, then deterministic shaping release behavior.
 
   - lab_id: lab31_qos_congestion_avoidance_wred
     stage: 31
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - wred_decision_profile
       - qos_wred_decision
-    summary: Apply WRED/ECN congestion decisions.
+    summary: Classify WRED threshold profile and emit deterministic FORWARD/MARK/DROP actions.
 
   - lab_id: lab32_route_redistribution_and_loop_prevention
     stage: 32
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - build_redistribution_tag
       - redistribute_with_loop_guard
-    summary: Redistribute routes with loop-suppression tags.
+    summary: Build canonical redistribution tags and suppress looped re-imports.
 
   - lab_id: lab33_fhrp_tracking_and_failover
     stage: 33
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - tracked_object_result
       - fhrp_track_failover
-    summary: Trigger active/standby transitions with tracking state.
+    summary: Derive tracked-object state and select deterministic active/standby roles.
 
   - lab_id: lab34_ipv6_nd_slaac_and_ra_guard
     stage: 34
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - derive_slaac_host_id
       - ipv6_nd_slaac_ra_guard
-    summary: Process IPv6 ND/SLAAC and enforce RA guard.
+    summary: Derive stable SLAAC host IDs and enforce RA guard decisions.
 
   - lab_id: lab35_ospfv3_adjacency_and_lsdb
     stage: 35
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - ospfv3_neighbor_result
       - ospfv3_adjacency_lsdb
-    summary: Drive OSPFv3 adjacency and LSDB install behavior.
+    summary: Derive OSPFv3 adjacency state and install LSAs into LSDB snapshots.
 
   - lab_id: lab36_mpbgp_ipv6_unicast
     stage: 36
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - rank_mpbgp_path
       - mpbgp_ipv6_unicast
-    summary: Select deterministic MP-BGP IPv6 best paths.
+    summary: Build deterministic MP-BGP ranking keys and select best IPv6 path.
 
   - lab_id: lab37_mpls_ldp_label_forwarding
     stage: 37
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - lfib_mapping
       - mpls_ldp_lfib
-    summary: Allocate LDP labels and program LFIB forwarding.
+    summary: Build LFIB mappings and return deterministic MPLS label forwarding tuples.
 
   - lab_id: lab38_l3vpn_vrf_and_route_targets
     stage: 38
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - vrf_import_action
       - l3vpn_vrf_route_targets
-    summary: Import VRF routes through route-target policy.
+    summary: Derive VRF route-target import action and emit IMPORT/REJECT outcomes.
 
   - lab_id: lab39_bgp_evpn_vxlan_basics
     stage: 39
     path: src/routeforge/runtime/phase2.py
     symbols:
+      - evpn_type2_entry
       - evpn_vxlan_control
-    summary: Learn and install EVPN MAC/IP control-plane entries.
+    summary: Build EVPN type-2 keys and install MAC/IP entries only for known VNIs.

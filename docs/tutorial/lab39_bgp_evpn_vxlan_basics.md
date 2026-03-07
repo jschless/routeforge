@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `evpn_vxlan_control` in `src/routeforge/runtime/phase2.py`.
+- Implement `evpn_type2_entry, evpn_vxlan_control` in `src/routeforge/runtime/phase2.py`.
 - Deliver `evpn_type2_learn`: EVPN type-2 route is learned for MAC/IP tuple.
 - Deliver `evpn_vni_map`: MAC/IP tuple is mapped to VNI context.
 - Deliver `evpn_mac_ip_install`: control-plane tuple installs in EVPN table.
@@ -16,22 +16,29 @@
 
 ## Concept walkthrough
 
-Overlay control-plane mapping of MAC/IP endpoints to VNI. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`evpn_vxlan_control`).
+Overlay control-plane mapping of MAC/IP endpoints to VNI. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`evpn_type2_entry, evpn_vxlan_control`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/phase2.py`
-- Symbol: `evpn_vxlan_control`
-- Why this target: implement the core behavior required by the three lab steps.
+- Symbols: `evpn_type2_entry, evpn_vxlan_control`
+- Why this target: build deterministic type-2 key and enforce known-VNI install policy.
 - Stage check: `routeforge check lab39`
+
+Function contract for this stage:
+
+- Symbol: `evpn_type2_entry(*, mac: str, ip: str, vni: int) -> str`
+- Required behavior: return deterministic key in `mac|ip|vni` format
+- Symbol: `evpn_vxlan_control(*, mac: str, ip: str, vni: int, known_vnis: set[int]) -> tuple[Literal["INSTALL", "REJECT"], str]`
+- Required behavior: install only for known VNI and return REJECT with empty payload otherwise
 
 Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab39_bgp_evpn_vxlan_basics`
-3. Edit only `evpn_vxlan_control` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `evpn_type2_entry, evpn_vxlan_control` in `src/routeforge/runtime/phase2.py`.
 4. Run `routeforge check lab39` until it exits with status `0`.
 5. Run `routeforge run lab39_bgp_evpn_vxlan_basics --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -72,7 +79,7 @@ Checkpoint guide:
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `evpn_vxlan_control` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab39` to confirm tests catch regressions.
+- Intentionally break `evpn_type2_entry` or `evpn_vxlan_control` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab39` to confirm tests catch regressions.
 - If `routeforge run lab39_bgp_evpn_vxlan_basics --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.

@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `port_security_ip_source_guard` in `src/routeforge/runtime/phase2.py`.
+- Implement `update_secure_mac_table, port_security_ip_source_guard` in `src/routeforge/runtime/phase2.py`.
 - Deliver `portsec_learn`: first host is learned under port-security limit.
 - Deliver `portsec_violation`: exceeding secure MAC limit triggers violation.
 - Deliver `ipsg_deny`: invalid source IP is denied.
@@ -16,22 +16,29 @@
 
 ## Concept walkthrough
 
-Edge port identity controls with secure MAC and source validation. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`port_security_ip_source_guard`).
+Edge port identity controls with secure MAC and source validation. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`update_secure_mac_table, port_security_ip_source_guard`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/phase2.py`
-- Symbol: `port_security_ip_source_guard`
-- Why this target: implement the core behavior required by the three lab steps.
+- Symbols: `update_secure_mac_table, port_security_ip_source_guard`
+- Why this target: implement secure-MAC table update semantics and final policy action resolution.
 - Stage check: `routeforge check lab29`
+
+Function contract for this stage:
+
+- Symbol: `update_secure_mac_table(*, max_macs: int, learned_macs: tuple[str, ...], source_mac: str) -> tuple[tuple[str, ...], bool]`
+- Required behavior: return stable learned-MAC tuple and violation flag when capacity is exceeded
+- Symbol: `port_security_ip_source_guard(*, max_macs: int, learned_macs: tuple[str, ...], source_mac: str, source_ip_allowed: bool) -> tuple[tuple[str, ...], Literal["ALLOW", "PORTSEC_VIOLATION", "IPSG_DENY"]]`
+- Required behavior: enforce port-security first, then return IP source guard deny/allow
 
 Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab29_port_security_and_ip_source_guard`
-3. Edit only `port_security_ip_source_guard` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `update_secure_mac_table, port_security_ip_source_guard` in `src/routeforge/runtime/phase2.py`.
 4. Run `routeforge check lab29` until it exits with status `0`.
 5. Run `routeforge run lab29_port_security_and_ip_source_guard --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -72,7 +79,7 @@ Checkpoint guide:
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `port_security_ip_source_guard` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab29` to confirm tests catch regressions.
+- Intentionally break `update_secure_mac_table` or `port_security_ip_source_guard` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab29` to confirm tests catch regressions.
 - If `routeforge run lab29_port_security_and_ip_source_guard --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.

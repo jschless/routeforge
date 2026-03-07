@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `l3vpn_vrf_route_targets` in `src/routeforge/runtime/phase2.py`.
+- Implement `vrf_import_action, l3vpn_vrf_route_targets` in `src/routeforge/runtime/phase2.py`.
 - Deliver `vrf_route_install`: VRF route installs when import RT matches.
 - Deliver `rt_import_match`: route-target import policy accepts matching RT.
 - Deliver `vpnv4_resolve`: VPNv4 route resolves into tenant VRF.
@@ -16,22 +16,29 @@
 
 ## Concept walkthrough
 
-VPN route leaking control with route-target policy. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`l3vpn_vrf_route_targets`).
+VPN route leaking control with route-target policy. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`vrf_import_action, l3vpn_vrf_route_targets`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/phase2.py`
-- Symbol: `l3vpn_vrf_route_targets`
-- Why this target: implement the core behavior required by the three lab steps.
+- Symbols: `vrf_import_action, l3vpn_vrf_route_targets`
+- Why this target: derive explicit import/reject action before emitting final VRF route outcome.
 - Stage check: `routeforge check lab38`
+
+Function contract for this stage:
+
+- Symbol: `vrf_import_action(*, import_rts: set[str], route_rt: str) -> Literal["IMPORT", "REJECT"]`
+- Required behavior: return IMPORT only when `route_rt` exists in `import_rts`
+- Symbol: `l3vpn_vrf_route_targets(*, import_rts: set[str], route_rt: str, prefix: str) -> tuple[Literal["IMPORT", "REJECT"], str]`
+- Required behavior: return `(action, prefix)` without mutating the original prefix
 
 Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab38_l3vpn_vrf_and_route_targets`
-3. Edit only `l3vpn_vrf_route_targets` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `vrf_import_action, l3vpn_vrf_route_targets` in `src/routeforge/runtime/phase2.py`.
 4. Run `routeforge check lab38` until it exits with status `0`.
 5. Run `routeforge run lab38_l3vpn_vrf_and_route_targets --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -72,7 +79,7 @@ Checkpoint guide:
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `l3vpn_vrf_route_targets` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab38` to confirm tests catch regressions.
+- Intentionally break `vrf_import_action` or `l3vpn_vrf_route_targets` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab38` to confirm tests catch regressions.
 - If `routeforge run lab38_l3vpn_vrf_and_route_targets --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.

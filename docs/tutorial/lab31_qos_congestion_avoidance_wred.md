@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `qos_wred_decision` in `src/routeforge/runtime/phase2.py`.
+- Implement `wred_decision_profile, qos_wred_decision` in `src/routeforge/runtime/phase2.py`.
 - Deliver `qos_wred_profile`: WRED profile activates above minimum threshold.
 - Deliver `qos_ecn_mark`: ECN-capable flow is marked before hard drop.
 - Deliver `qos_wred_drop`: queue beyond max threshold is dropped.
@@ -16,22 +16,29 @@
 
 ## Concept walkthrough
 
-Congestion avoidance with deterministic threshold actions. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`qos_wred_decision`).
+Congestion avoidance with deterministic threshold actions. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`wred_decision_profile, qos_wred_decision`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/phase2.py`
-- Symbol: `qos_wred_decision`
-- Why this target: implement the core behavior required by the three lab steps.
+- Symbols: `wred_decision_profile, qos_wred_decision`
+- Why this target: classify queue-depth thresholds first, then resolve FORWARD/MARK/DROP action.
 - Stage check: `routeforge check lab31`
+
+Function contract for this stage:
+
+- Symbol: `wred_decision_profile(*, queue_depth: int, min_threshold: int, max_threshold: int) -> Literal["BELOW_MIN", "BETWEEN_THRESHOLDS", "AT_OR_ABOVE_MAX"]`
+- Required behavior: classify queue depth into one deterministic threshold profile
+- Symbol: `qos_wred_decision(*, queue_depth: int, min_threshold: int, max_threshold: int, ecn_capable: bool) -> Literal["FORWARD", "MARK", "DROP"]`
+- Required behavior: map profile + ECN capability into deterministic congestion action
 
 Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab31_qos_congestion_avoidance_wred`
-3. Edit only `qos_wred_decision` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `wred_decision_profile, qos_wred_decision` in `src/routeforge/runtime/phase2.py`.
 4. Run `routeforge check lab31` until it exits with status `0`.
 5. Run `routeforge run lab31_qos_congestion_avoidance_wred --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -72,7 +79,7 @@ Checkpoint guide:
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `qos_wred_decision` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab31` to confirm tests catch regressions.
+- Intentionally break `wred_decision_profile` or `qos_wred_decision` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab31` to confirm tests catch regressions.
 - If `routeforge run lab31_qos_congestion_avoidance_wred --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.

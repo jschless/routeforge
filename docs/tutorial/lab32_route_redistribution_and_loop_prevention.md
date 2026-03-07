@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `redistribute_with_loop_guard` in `src/routeforge/runtime/phase2.py`.
+- Implement `build_redistribution_tag, redistribute_with_loop_guard` in `src/routeforge/runtime/phase2.py`.
 - Deliver `redist_import`: new route is imported into target protocol.
 - Deliver `redist_tag_set`: redistributed route is tagged for loop prevention.
 - Deliver `redist_loop_suppress`: re-seen tag is suppressed to prevent loops.
@@ -16,22 +16,29 @@
 
 ## Concept walkthrough
 
-Controlled redistribution using protocol tags to stop feedback loops. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`redistribute_with_loop_guard`).
+Controlled redistribution using protocol tags to stop feedback loops. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`build_redistribution_tag, redistribute_with_loop_guard`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/phase2.py`
-- Symbol: `redistribute_with_loop_guard`
-- Why this target: implement the core behavior required by the three lab steps.
+- Symbols: `build_redistribution_tag, redistribute_with_loop_guard`
+- Why this target: build canonical tags and enforce one-time import loop guard behavior.
 - Stage check: `routeforge check lab32`
+
+Function contract for this stage:
+
+- Symbol: `build_redistribution_tag(*, source_prefix: str, source_protocol: str) -> str`
+- Required behavior: return uppercase canonical tag in `PROTOCOL:prefix` format
+- Symbol: `redistribute_with_loop_guard(*, source_prefix: str, source_protocol: str, existing_tags: set[str]) -> tuple[set[str], Literal["IMPORT", "LOOP_SUPPRESS"]]`
+- Required behavior: import once per canonical tag; suppress re-import when tag is already present
 
 Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab32_route_redistribution_and_loop_prevention`
-3. Edit only `redistribute_with_loop_guard` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `build_redistribution_tag, redistribute_with_loop_guard` in `src/routeforge/runtime/phase2.py`.
 4. Run `routeforge check lab32` until it exits with status `0`.
 5. Run `routeforge run lab32_route_redistribution_and_loop_prevention --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -72,7 +79,7 @@ Checkpoint guide:
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `redistribute_with_loop_guard` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab32` to confirm tests catch regressions.
+- Intentionally break `build_redistribution_tag` or `redistribute_with_loop_guard` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab32` to confirm tests catch regressions.
 - If `routeforge run lab32_route_redistribution_and_loop_prevention --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.
