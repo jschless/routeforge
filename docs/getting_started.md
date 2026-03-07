@@ -66,6 +66,102 @@ routeforge progress show --state-file /tmp/routeforge-progress.json
 routeforge run lab02_mac_learning_switch --state-file /tmp/routeforge-progress.json
 ```
 
+## What "Complete A Lab" Means
+
+A lab is complete when all of the following are true:
+
+1. `routeforge run <lab_id>` exits with code `0`.
+2. Every printed step line is `[PASS]`.
+3. The run prints checkpoints for that lab.
+4. If you used `--state-file`, that lab appears in `labs.completed.list`.
+
+If any step shows `[FAIL]`, the lab is not complete yet.
+
+## How To Read Lab Output
+
+Example:
+
+```text
+running lab: lab02_mac_learning_switch
+[PASS] unknown_unicast_flood: unknown unicast floods to all non-ingress ports
+[PASS] known_unicast_forward: MAC learning enables deterministic unicast forwarding
+checkpoints: PARSE_OK, VLAN_CLASSIFY, MAC_LEARN, L2_FLOOD, L2_UNICAST_FORWARD
+progress updated: /tmp/routeforge-progress.json
+```
+
+Interpretation:
+
+- `running lab`: the selected scenario started.
+- each `[PASS]/[FAIL]` line is a step-level assertion.
+- `checkpoints`: named events hit during the run.
+- `progress updated`: completion state was written to your state file.
+
+## What Is A Step vs A Checkpoint?
+
+- Step:
+  - human-readable test/assertion for one behavior in the lab
+  - shown as `[PASS]` or `[FAIL]`
+  - examples: `qos_remark`, `bgp_best_path_select`
+
+- Checkpoint:
+  - machine-readable event marker in the simulation timeline
+  - used for conformance and debugging
+  - examples: `PARSE_DROP`, `BGP_BEST_PATH`, `QOS_DEQUEUE`
+
+Think of steps as "did this requirement pass?" and checkpoints as "what internal events happened?"
+
+## What To Do If You See "blocked"
+
+If output says:
+
+```text
+blocked: <lab_id> has unmet prerequisites: ...
+```
+
+that lab is locked until prerequisite labs are complete. Run the missing labs first.
+
+Tip: `routeforge progress show --state-file <file>` always shows what is unlocked next.
+
+## Completion Checklist (Copy/Paste Workflow)
+
+```bash
+STATE=/tmp/routeforge-progress.json
+routeforge progress reset --state-file "$STATE"
+
+routeforge run lab01_frame_and_headers --state-file "$STATE"
+routeforge progress show --state-file "$STATE"
+
+routeforge run lab02_mac_learning_switch --state-file "$STATE"
+routeforge progress show --state-file "$STATE"
+
+routeforge run lab03_vlan_and_trunks --state-file "$STATE"
+routeforge progress show --state-file "$STATE"
+```
+
+Repeat this pattern for each newly unlocked lab.
+
+## If A Lab Fails
+
+1. Re-run with trace output:
+
+```bash
+routeforge run <lab_id> --state-file "$STATE" --trace-out /tmp/lab-trace.jsonl
+```
+
+2. Replay full timeline:
+
+```bash
+routeforge debug replay --trace /tmp/lab-trace.jsonl
+```
+
+3. Explain one failing step:
+
+```bash
+routeforge debug explain --trace /tmp/lab-trace.jsonl --step <step_name>
+```
+
+4. Open the matching tutorial chapter and compare expected checkpoints.
+
 ## Core Commands
 
 - `routeforge labs`: ordered curriculum list
