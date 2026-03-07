@@ -53,3 +53,14 @@ def test_tdl_check_command_calls_runner(monkeypatch, capsys) -> None:
     output = capsys.readouterr().out
     assert "running tdl checks: target=tdl_wlan_04_wmm_queue_mapping" in output
     assert captured["target"] == "tdl_wlan_04_wmm_queue_mapping"
+
+
+def test_tdl_run_handles_unimplemented_challenge(monkeypatch, capsys, tmp_path) -> None:
+    def _fake_run_tdl_challenge(challenge_id: str):  # type: ignore[no-untyped-def]
+        raise NotImplementedError("TODO: implement validate_yang_path")
+
+    monkeypatch.setattr("routeforge.cli.run_tdl_challenge", _fake_run_tdl_challenge)
+    state = tmp_path / "tdl-progress.json"
+    assert main(["tdl", "run", "tdl_auto_01_yang_path_validation", "--state-file", str(state)]) == 4
+    output = capsys.readouterr().out
+    assert "challenge implementation missing:" in output
