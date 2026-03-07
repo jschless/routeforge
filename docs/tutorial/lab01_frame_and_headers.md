@@ -22,9 +22,9 @@
 
 Student coding task:
 
-- Implement `src/routeforge/student/lab01.py`.
-- Run `routeforge run lab01_frame_and_headers --student`.
-- Iterate until all student validation steps pass.
+- Implement TODOs in `src/routeforge/model/packet.py` (student branch).
+- Run `routeforge check lab01`.
+- Iterate until staged student tests pass.
 
 ## Verification commands and expected outputs
 

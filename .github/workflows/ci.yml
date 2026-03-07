@@ -25,4 +25,9 @@ jobs:
         run: PYTHONPATH=src ruff check
 
       - name: Pytest
+        if: github.ref_name != 'student'
         run: PYTHONPATH=src pytest -q
+
+      - name: Pytest Student Harness
+        if: github.ref_name == 'student'
+        run: PYTHONPATH=src pytest -q tests/student --stage-max 0

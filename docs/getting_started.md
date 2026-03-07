@@ -77,26 +77,36 @@ A lab is complete when all of the following are true:
 
 If any step shows `[FAIL]`, the lab is not complete yet.
 
-## Student Coding Mode (Write Code Yourself)
+## Branch-Based Student Workflow
 
-If you want hands-on coding tasks (not just run/interpret), use student mode:
+RouteForge is intended to be used with two branches:
+
+- `main`: reference implementation (all solutions)
+- `student`: same codebase, but selected lab files contain TODO blanks
+
+Student loop:
+
+1. `git switch student`
+2. edit the real source file for the current lab (for Lab 1: `src/routeforge/model/packet.py`)
+3. run staged tests:
 
 ```bash
-routeforge run lab01_frame_and_headers --student --state-file /tmp/routeforge-progress.json
+routeforge check lab01
 ```
 
-Student mode for Lab 1 expects you to edit:
+4. when green, move to the next stage:
 
-- `src/routeforge/student/lab01.py`
+```bash
+routeforge check lab02
+```
 
-Implement these functions:
+By the end of the course:
 
-- `validate_mac`
-- `validate_ipv4`
-- `validate_ttl`
-- `frame_should_parse`
+```bash
+routeforge check all
+```
 
-Then re-run the same command until all student steps show `[PASS]`.
+should pass.
 
 ## How To Read Lab Output
 
@@ -188,7 +198,7 @@ routeforge debug explain --trace /tmp/lab-trace.jsonl --step <step_name>
 - `routeforge labs`: ordered curriculum list
 - `routeforge show <lab_id>`: lab metadata + conformance mapping
 - `routeforge run <lab_id>`: execute lab with prerequisite checks
-- `routeforge run <lab_id> --student`: run student coding checks (available labs only)
+- `routeforge check <labNN|lab_id|all>`: run staged student tests up to a milestone
 - `routeforge run <lab_id> --trace-out <file>`: write JSONL trace records
 - `routeforge debug replay --trace <file>`: replay timeline
 - `routeforge debug explain --trace <file> --step <step_name>`: inspect one step

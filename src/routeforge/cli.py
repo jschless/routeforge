@@ -5,11 +5,14 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
+import subprocess
+import sys
 
 from routeforge.debug.replay import explain_lines, load_trace, replay_lines
 from routeforge.labs.assessment import evaluate_assessment, load_assessment_rubric
 from routeforge.labs.conformance import load_conformance_matrix
-from routeforge.labs.exercises import LAB_RUNNERS, STUDENT_LAB_RUNNERS, run_lab, run_student_lab
+from routeforge.labs.exercises import LAB_RUNNERS, run_lab
 from routeforge.labs.manifest import LABS, get_lab, missing_prereqs
 from routeforge.labs.progress import (
     DEFAULT_PROGRESS_PATH,
@@ -42,11 +45,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--trace-out", type=Path, default=None, help="Write JSONL trace output for the lab run")
     run.add_argument("--state-file", type=Path, default=None, help="Optional progress state file to update")
-    run.add_argument(
-        "--student",
-        action="store_true",
-        help="Run student coding checks (available labs only; currently lab01).",
-    )
+
+    check = sub.add_parser("check", help="Run staged student tests up to one lab or all labs")
+    check.add_argument("target", help="Lab stage target (for example: lab01, lab01_frame_and_headers, or all)")
 
     progress = sub.add_parser("progress", help="Show and manage learner progress")
     progress_sub = progress.add_subparsers(dest="progress_command", required=True)
@@ -124,13 +125,7 @@ def _resolve_state_file(path: Path | None) -> Path:
     return path or DEFAULT_PROGRESS_PATH
 
 
-def _cmd_run(
-    lab_id: str,
-    completed_values: list[str],
-    trace_out: Path | None,
-    state_file: Path | None,
-    student_mode: bool,
-) -> int:
+def _cmd_run(lab_id: str, completed_values: list[str], trace_out: Path | None, state_file: Path | None) -> int:
     entry = get_lab(lab_id)
     if entry is None:
         print(f"unknown lab: {lab_id}")
@@ -155,18 +150,13 @@ def _cmd_run(
         print(f"blocked: {lab_id} has unmet prerequisites: {unmet_text}")
         return 2
 
-    available_runners = STUDENT_LAB_RUNNERS if student_mode else LAB_RUNNERS
-    if lab_id not in available_runners:
-        implemented = ", ".join(sorted(available_runners))
-        if student_mode:
-            print(f"student coding checks not available yet: {lab_id}")
-            print(f"currently available student labs: {implemented if implemented else 'none'}")
-            return 3
+    if lab_id not in LAB_RUNNERS:
+        implemented = ", ".join(sorted(LAB_RUNNERS))
         print(f"lab implementation not available yet: {lab_id}")
         print(f"currently implemented: {implemented}")
         return 3
 
-    result = run_student_lab(lab_id) if student_mode else run_lab(lab_id)
+    result = run_lab(lab_id)
     if trace_out is not None:
         trace_out.parent.mkdir(parents=True, exist_ok=True)
         with trace_out.open("w", encoding="utf-8") as handle:
@@ -245,6 +235,41 @@ def _cmd_progress_reset(state_file: Path | None) -> int:
         return 1
     print(f"progress reset: {state_path}")
     return 0
+
+
+def _stage_for_target(target: str) -> tuple[int, str] | None:
+    normalized = target.strip()
+    if not normalized:
+        return None
+    if normalized.lower() == "all":
+        return len(LABS), "all"
+
+    short_match = re.fullmatch(r"lab(\d{2})", normalized.lower())
+    if short_match is not None:
+        stage = int(short_match.group(1))
+        if 1 <= stage <= len(LABS):
+            return stage, f"lab{stage:02d}"
+        return None
+
+    for index, entry in enumerate(LABS, start=1):
+        if normalized == entry["id"]:
+            return index, entry["id"]
+    return None
+
+
+def _cmd_check(target: str) -> int:
+    stage_info = _stage_for_target(target)
+    if stage_info is None:
+        print(f"unknown check target: {target}")
+        print("valid examples: lab01, lab01_frame_and_headers, all")
+        return 1
+
+    stage_max, label = stage_info
+    repo_root = Path(__file__).resolve().parents[2]
+    command = [sys.executable, "-m", "pytest", "-q", "tests/student", "--stage-max", str(stage_max)]
+    print(f"running staged checks: target={label} stage_max={stage_max}")
+    completed = subprocess.run(command, cwd=repo_root, check=False)
+    return completed.returncode
 
 
 def _feature_coverage_counts(completed: set[str], *, matrix: object, level: str) -> tuple[int, int]:
@@ -360,7 +385,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "show":
         return _cmd_show(args.lab_id)
     if args.command == "run":
-        return _cmd_run(args.lab_id, args.completed, args.trace_out, args.state_file, args.student)
+        return _cmd_run(args.lab_id, args.completed, args.trace_out, args.state_file)
+    if args.command == "check":
+        return _cmd_check(args.target)
     if args.command == "progress":
         if args.progress_command == "show":
             return _cmd_progress_show(args.state_file)

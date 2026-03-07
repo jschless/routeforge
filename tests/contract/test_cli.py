@@ -116,17 +116,30 @@ def test_run_lab27_allows_when_prereqs_met() -> None:
     assert main(argv) == 0
 
 
-def test_run_student_mode_unavailable_for_lab02(capsys) -> None:
-    assert main(["run", "lab02_mac_learning_switch", "--student", "--completed", "lab01_frame_and_headers"]) == 3
+def test_check_command_rejects_unknown_target(capsys) -> None:
+    assert main(["check", "nope"]) == 1
     output = capsys.readouterr().out
-    assert "student coding checks not available yet" in output
+    assert "unknown check target" in output
 
 
-def test_run_student_mode_lab01_surfaces_not_implemented(capsys) -> None:
-    assert main(["run", "lab01_frame_and_headers", "--student"]) == 4
-    output = capsys.readouterr().out.lower()
-    assert "not implemented: validate_mac" in output
-    assert "edit src/routeforge/student/lab01.py" in output
+def test_check_command_uses_stage_limit(monkeypatch, capsys) -> None:
+    captured: dict[str, object] = {}
+
+    class _Completed:
+        returncode = 0
+
+    def _fake_run(command, *, cwd, check):  # type: ignore[no-untyped-def]
+        captured["command"] = command
+        captured["cwd"] = cwd
+        captured["check"] = check
+        return _Completed()
+
+    monkeypatch.setattr("routeforge.cli.subprocess.run", _fake_run)
+    assert main(["check", "lab01"]) == 0
+    output = capsys.readouterr().out
+    assert "stage_max=1" in output
+    assert captured["command"][-1] == "1"
+    assert captured["check"] is False
 
 
 def test_run_command_writes_trace(tmp_path) -> None:

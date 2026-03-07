@@ -49,10 +49,11 @@ Progress and readiness reporting are available via CLI:
 - `routeforge report [--json-out ...]`
 - `routeforge report --rubric-file labs/assessment_rubric.yaml` for weighted scoring bands
 
-Student coding mode is available for `lab01`:
+Student experience is branch-based:
 
-- edit `src/routeforge/student/lab01.py`
-- run `routeforge run lab01_frame_and_headers --student`
+- `main`: reference implementation (all tests pass)
+- `student`: same repo with selected TODO blanks in real source files
+- staged checks: `routeforge check lab01`, `routeforge check lab02`, ... `routeforge check all`
 
 ## Quickstart
 
@@ -60,36 +61,16 @@ Student coding mode is available for `lab01`:
 python -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev]'
-routeforge labs
-routeforge run lab01_frame_and_headers
-routeforge run lab02_mac_learning_switch --completed lab01_frame_and_headers
-routeforge run lab03_vlan_and_trunks --completed lab01_frame_and_headers --completed lab02_mac_learning_switch
-routeforge run lab04_stp --completed lab01_frame_and_headers --completed lab02_mac_learning_switch --completed lab03_vlan_and_trunks
-routeforge run lab05_stp_convergence_and_protection --completed lab01_frame_and_headers --completed lab02_mac_learning_switch --completed lab03_vlan_and_trunks --completed lab04_stp
-routeforge run lab06_arp_and_adjacency --completed lab01_frame_and_headers --completed lab02_mac_learning_switch --completed lab03_vlan_and_trunks --completed lab04_stp --completed lab05_stp_convergence_and_protection
-routeforge run lab07_ipv4_subnet_and_rib --completed lab01_frame_and_headers --completed lab02_mac_learning_switch --completed lab03_vlan_and_trunks --completed lab04_stp --completed lab05_stp_convergence_and_protection --completed lab06_arp_and_adjacency
-routeforge run lab08_fib_forwarding_pipeline --completed lab01_frame_and_headers --completed lab02_mac_learning_switch --completed lab03_vlan_and_trunks --completed lab04_stp --completed lab05_stp_convergence_and_protection --completed lab06_arp_and_adjacency --completed lab07_ipv4_subnet_and_rib
-routeforge run lab09_icmp_and_control_responses --completed lab01_frame_and_headers --completed lab02_mac_learning_switch --completed lab03_vlan_and_trunks --completed lab04_stp --completed lab05_stp_convergence_and_protection --completed lab06_arp_and_adjacency --completed lab07_ipv4_subnet_and_rib --completed lab08_fib_forwarding_pipeline
-routeforge run lab10_ipv4_control_plane_diagnostics --completed lab01_frame_and_headers --completed lab02_mac_learning_switch --completed lab03_vlan_and_trunks --completed lab04_stp --completed lab05_stp_convergence_and_protection --completed lab06_arp_and_adjacency --completed lab07_ipv4_subnet_and_rib --completed lab08_fib_forwarding_pipeline --completed lab09_icmp_and_control_responses
-routeforge run lab11_ospf_adjacency_fsm --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics
-routeforge run lab12_ospf_network_types_and_dr_bdr --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm
-routeforge run lab13_ospf_lsa_flooding_and_lsdb --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm,lab12_ospf_network_types_and_dr_bdr
-routeforge run lab14_ospf_spf_and_route_install --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm,lab12_ospf_network_types_and_dr_bdr,lab13_ospf_lsa_flooding_and_lsdb
-routeforge run lab15_ospf_multi_area_abr --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm,lab12_ospf_network_types_and_dr_bdr,lab13_ospf_lsa_flooding_and_lsdb,lab14_ospf_spf_and_route_install
-routeforge run lab16_udp_tcp_fundamentals --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm,lab12_ospf_network_types_and_dr_bdr,lab13_ospf_lsa_flooding_and_lsdb,lab14_ospf_spf_and_route_install,lab15_ospf_multi_area_abr
-routeforge run lab17_bfd_for_liveness --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm,lab12_ospf_network_types_and_dr_bdr,lab13_ospf_lsa_flooding_and_lsdb,lab14_ospf_spf_and_route_install,lab15_ospf_multi_area_abr,lab16_udp_tcp_fundamentals
-routeforge run lab18_acl_pipeline --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm,lab12_ospf_network_types_and_dr_bdr,lab13_ospf_lsa_flooding_and_lsdb,lab14_ospf_spf_and_route_install,lab15_ospf_multi_area_abr,lab16_udp_tcp_fundamentals,lab17_bfd_for_liveness
-routeforge run lab19_nat44_stateful_translation --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm,lab12_ospf_network_types_and_dr_bdr,lab13_ospf_lsa_flooding_and_lsdb,lab14_ospf_spf_and_route_install,lab15_ospf_multi_area_abr,lab16_udp_tcp_fundamentals,lab17_bfd_for_liveness,lab18_acl_pipeline
-routeforge run lab20_qos_marking_and_queueing --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm,lab12_ospf_network_types_and_dr_bdr,lab13_ospf_lsa_flooding_and_lsdb,lab14_ospf_spf_and_route_install,lab15_ospf_multi_area_abr,lab16_udp_tcp_fundamentals,lab17_bfd_for_liveness,lab18_acl_pipeline,lab19_nat44_stateful_translation
-routeforge run lab21_bgp_session_fsm_and_transport --completed <all-prior-labs> --state-file /tmp/routeforge-progress.json
-routeforge progress show --state-file /tmp/routeforge-progress.json
-routeforge run lab22_bgp_attributes_and_bestpath --state-file /tmp/routeforge-progress.json
-routeforge report --state-file /tmp/routeforge-progress.json
-routeforge report --state-file /tmp/routeforge-progress.json --json-out /tmp/routeforge-report.json
-routeforge report --state-file /tmp/routeforge-progress.json --rubric-file labs/assessment_rubric.yaml
-routeforge run lab01_frame_and_headers --trace-out /tmp/lab01-trace.jsonl
-routeforge debug replay --trace /tmp/lab01-trace.jsonl
-routeforge debug explain --trace /tmp/lab01-trace.jsonl --step invalid_frame_drops
+git switch student
+routeforge check lab01
+routeforge check lab02
+routeforge check all
+
+# optional runtime/progress workflow
+STATE=/tmp/routeforge-progress.json
+routeforge run lab01_frame_and_headers --state-file "$STATE"
+routeforge progress show --state-file "$STATE"
+routeforge report --state-file "$STATE"
 ```
 
 ## Documentation
