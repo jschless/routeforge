@@ -9,6 +9,16 @@ from routeforge.model.packet import ETHERTYPE_IPV4, EthernetFrame, IPv4Header, i
 from routeforge.runtime.dataplane_sim import DataplaneSim
 from routeforge.runtime.interface import Interface
 from routeforge.runtime.router import Router
+from routeforge.runtime.stp import (
+    Bridge,
+    BridgeID,
+    Link,
+    PortRef,
+    bpdu_guard_decision,
+    compute_stp,
+    remove_link,
+    role_changes,
+)
 
 
 def _required_checkpoints_for_lab(lab_id: str) -> set[str]:
@@ -89,6 +99,68 @@ def test_stage02_forwarding_plan_decisions() -> None:
     assert same_port.action == "DROP"
     assert same_port.reason == "L2_SAME_PORT_DESTINATION"
     assert same_port.checkpoint == "PARSE_DROP"
+
+
+@pytest.mark.stage(3)
+def test_stage03_egress_vlan_plan_decisions() -> None:
+    router = Router(node_id="R1")
+    router.add_interface(Interface(name="eth0", mode="access", access_vlan=10))
+    router.add_interface(Interface(name="eth1", mode="trunk", native_vlan=1, allowed_vlans={1, 10, 20}))
+    router.add_interface(Interface(name="eth2", mode="access", access_vlan=20))
+    sim = DataplaneSim(router)
+
+    push = sim._determine_egress_vlan_plan(
+        ingress_vlan=10,
+        ingress_tag=None,
+        egress_port_name="eth1",
+    )
+    assert push.allowed is True
+    assert push.egress_vlan_id == 10
+    assert push.checkpoint == "VLAN_TAG_PUSH"
+
+    pop = sim._determine_egress_vlan_plan(
+        ingress_vlan=20,
+        ingress_tag=20,
+        egress_port_name="eth2",
+    )
+    assert pop.allowed is True
+    assert pop.egress_vlan_id is None
+    assert pop.checkpoint == "VLAN_TAG_POP"
+
+    deny = sim._determine_egress_vlan_plan(
+        ingress_vlan=20,
+        ingress_tag=20,
+        egress_port_name="eth0",
+    )
+    assert deny.allowed is False
+
+
+@pytest.mark.stage(5)
+def test_stage05_stp_role_changes_and_bpdu_guard() -> None:
+    bridges = [
+        Bridge(node_id="S1", bridge_id=BridgeID(priority=32768, mac="00:00:00:00:00:01")),
+        Bridge(node_id="S2", bridge_id=BridgeID(priority=32768, mac="00:00:00:00:00:02")),
+        Bridge(node_id="S3", bridge_id=BridgeID(priority=32768, mac="00:00:00:00:00:03")),
+    ]
+    links = [
+        Link(a=PortRef("S1", "Gi0/1"), b=PortRef("S2", "Gi0/1"), cost=4),
+        Link(a=PortRef("S1", "Gi0/2"), b=PortRef("S3", "Gi0/1"), cost=4),
+        Link(a=PortRef("S2", "Gi0/2"), b=PortRef("S3", "Gi0/2"), cost=4),
+    ]
+    before = compute_stp(bridges, links)
+    after = compute_stp(bridges, remove_link(links, a=("S1", "Gi0/2"), b=("S3", "Gi0/1")))
+
+    changes = role_changes(before, after)
+    assert changes
+    assert ("S3", "Gi0/1") in changes
+
+    tripped = bpdu_guard_decision(port=("S2", "Gi0/10"), edge_port=True, bpdu_received=True)
+    assert tripped.action == "ERRDISABLE"
+    assert tripped.reason == "STP_BPDU_GUARD_TRIPPED"
+
+    clear = bpdu_guard_decision(port=("S2", "Gi0/10"), edge_port=False, bpdu_received=True)
+    assert clear.action == "FORWARD"
+    assert clear.reason == "STP_GUARD_CLEAR"
 
 
 @pytest.mark.parametrize(

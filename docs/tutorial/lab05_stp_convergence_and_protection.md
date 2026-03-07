@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `bpdu_guard_decision` in `src/routeforge/runtime/stp.py`.
+- Implement `role_changes, bpdu_guard_decision` in `src/routeforge/runtime/stp.py`.
 - Deliver `stp_topology_change`: link failure triggers deterministic STP re-convergence.
 - Deliver `stp_guard_action`: BPDU guard puts an edge port into errdisable state.
 - Validate internal behavior through checkpoints: STP_TOPOLOGY_CHANGE, STP_GUARD_ACTION.
@@ -15,16 +15,23 @@
 
 ## Concept walkthrough
 
-Topology change handling and protection semantics. Student-mode coding target for this stage is `src/routeforge/runtime/stp.py` (`bpdu_guard_decision`).
+Topology change handling and protection semantics. Student-mode coding target for this stage is `src/routeforge/runtime/stp.py` (`role_changes, bpdu_guard_decision`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/stp.py`
-- Symbols: `bpdu_guard_decision`
-- Why this target: Apply BPDU guard behavior on edge ports.
+- Symbols: `role_changes, bpdu_guard_decision`
+- Why this target: Compute reconvergence role deltas and enforce BPDU guard control-plane safety.
 - Stage check: `routeforge check lab05`
+
+Function contract for this stage:
+
+- Symbol: `role_changes(previous: STPResult, current: STPResult) -> dict[tuple[str, str], tuple[str, str]]`
+- Required behavior: include every port role transition, and map missing ports as `DOWN`
+- Symbol: `bpdu_guard_decision(*, port: tuple[str, str], edge_port: bool, bpdu_received: bool) -> GuardDecision`
+- Required outputs: `ERRDISABLE/STP_BPDU_GUARD_TRIPPED` for edge+BPDU, otherwise `FORWARD/STP_GUARD_CLEAR`
 
 Suggested student walkthrough:
 
@@ -78,4 +85,3 @@ Checkpoint guide:
 
 - IEEE 802.1D (bridging and STP fundamentals).
 - IEEE 802.1Q (VLAN tagging and trunk behavior).
-
