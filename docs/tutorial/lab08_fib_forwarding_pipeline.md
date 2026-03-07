@@ -2,47 +2,82 @@
 
 ## Learning objectives
 
-- Use selected route information to forward IPv4 traffic.
-- Apply deterministic TTL decrement semantics.
-- Emit explicit drop checkpoints when forwarding cannot continue.
+- Implement `forward_packet` in `src/routeforge/runtime/l3.py`.
+- Deliver `fib_forward_and_ttl`: FIB hit forwards packet and decrements TTL.
+- Deliver `fib_drop_no_route`: FIB miss drops packet with deterministic reason.
+- Validate internal behavior through checkpoints: TTL_DECREMENT, FIB_FORWARD, FIB_DROP.
 
 ## Prerequisite recap
 
-- Complete `lab07_ipv4_subnet_and_rib`.
-- Understand distinction between route lookup and forwarding action.
+- Required prior labs: lab07_ipv4_subnet_and_rib.
+- Confirm target mapping before coding with `routeforge show lab08_fib_forwarding_pipeline`.
+- Work on the `student` branch so you are editing TODO stubs, not solved reference code.
 
 ## Concept walkthrough
 
-`lab08` turns routing decisions into forwarding outcomes. A route hit forwards packets and decrements TTL; missing route or invalid TTL causes deterministic drops.
+FIB forwarding pipeline with TTL decrement and drop reasons. Student-mode coding target for this stage is `src/routeforge/runtime/l3.py` (`forward_packet`).
 
 ## Implementation TODO map
 
-- `src/routeforge/runtime/l3.py`: forwarding decision logic.
-- `src/routeforge/labs/exercises.py`: forward and drop verification steps.
+Primary target for this stage:
+
+- File: `src/routeforge/runtime/l3.py`
+- Symbols: `forward_packet`
+- Why this target: Build forwarding/drop decisions with TTL handling.
+- Stage check: `routeforge check lab08`
+
+Suggested student walkthrough:
+
+1. `git switch student`
+2. `routeforge show lab08_fib_forwarding_pipeline`
+3. Edit only the listed symbols in `src/routeforge/runtime/l3.py`.
+4. Run `routeforge check lab08` until it exits with status `0`.
+5. Run `routeforge run lab08_fib_forwarding_pipeline --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
 ## Verification commands and expected outputs
 
 ```bash
-PYTHONPATH=src python -m routeforge run lab08_fib_forwarding_pipeline --completed lab01_frame_and_headers --completed lab02_mac_learning_switch --completed lab03_vlan_and_trunks --completed lab04_stp --completed lab05_stp_convergence_and_protection --completed lab06_arp_and_adjacency --completed lab07_ipv4_subnet_and_rib
+routeforge show lab08_fib_forwarding_pipeline
+routeforge check lab08
+
+STATE=/tmp/routeforge-progress.json
+routeforge run lab08_fib_forwarding_pipeline --state-file "$STATE"
 ```
 
-Expected:
+Expected outcomes:
 
-- `fib_forward_and_ttl` step `PASS`.
-- `fib_drop_no_route` step `PASS`.
-- Checkpoints include `FIB_FORWARD`, `FIB_DROP`, `TTL_DECREMENT`.
+- `routeforge show` prints `student.stage`, `student.target`, and `student.symbols` matching this chapter.
+- `routeforge check lab08` passes when your implementation is complete for this stage.
+- `fib_forward_and_ttl` should print `[PASS]` (FIB hit forwards packet and decrements TTL).
+- `fib_drop_no_route` should print `[PASS]` (FIB miss drops packet with deterministic reason).
+- Run output includes checkpoints: TTL_DECREMENT, FIB_FORWARD, FIB_DROP.
 
 ## Debug trace checkpoints and interpretation guidance
 
-- `FIB_FORWARD`: packet forwarded toward next hop.
-- `TTL_DECREMENT`: forwarding reduced TTL by one.
-- `FIB_DROP`: forwarding terminated with a normalized reason.
+Generate trace artifacts when a step fails:
+
+```bash
+routeforge run lab08_fib_forwarding_pipeline --state-file "$STATE" --trace-out /tmp/lab08_fib_forwarding_pipeline.jsonl
+routeforge debug replay --trace /tmp/lab08_fib_forwarding_pipeline.jsonl
+routeforge debug explain --trace /tmp/lab08_fib_forwarding_pipeline.jsonl --step fib_forward_and_ttl
+```
+
+Checkpoint guide:
+
+- `TTL_DECREMENT`: FIB forwarding pipeline with TTL decrement and drop reasons.
+- `FIB_FORWARD`: FIB forwarding pipeline with TTL decrement and drop reasons.
+- `FIB_DROP`: FIB forwarding pipeline with TTL decrement and drop reasons.
 
 ## Failure drills and troubleshooting flow
 
-- Force TTL=1 and verify `TTL_EXPIRED` drop behavior.
-- Remove route and verify `NO_ROUTE` drop reason.
+- Intentionally break one listed symbol in `src/routeforge/runtime/l3.py` and rerun `routeforge check lab08` to confirm tests catch regressions.
+- If `routeforge run lab08_fib_forwarding_pipeline --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
+- Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
+- Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.
 
 ## Standards and references
 
-- RFC 791 TTL behavior.
+- RFC 791 (IPv4).
+- RFC 792 (ICMP).
+- RFC 826 (ARP).
+

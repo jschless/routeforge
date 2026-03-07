@@ -2,46 +2,79 @@
 
 ## Learning objectives
 
-- Perform deterministic readiness checks across subsystems.
-- Emit telemetry in stable, parseable structure.
-- Correlate health and telemetry outputs for operations workflows.
+- Implement `emit_telemetry` in `src/routeforge/runtime/observability.py`.
+- Deliver `ops_readiness_check`: service health checks produce deterministic readiness status.
+- Deliver `ops_telemetry_emit`: telemetry export emits sorted counter payload for reproducible parsing.
+- Validate internal behavior through checkpoints: OPS_READINESS_CHECK, TELEMETRY_EMIT.
 
 ## Prerequisite recap
 
-- Complete `lab25_tunnels_and_ipsec`.
-- Recall deterministic troubleshooting outputs from `lab10`.
+- Required prior labs: lab25_tunnels_and_ipsec.
+- Confirm target mapping before coding with `routeforge show lab26_observability_and_ops`.
+- Work on the `student` branch so you are editing TODO stubs, not solved reference code.
 
 ## Concept walkthrough
 
-`lab26` is an operations-focused lab. It validates readiness state and emits normalized telemetry payloads that support repeatable monitoring and checks.
+Operational telemetry/readiness checks with deterministic outputs. Student-mode coding target for this stage is `src/routeforge/runtime/observability.py` (`emit_telemetry`).
 
 ## Implementation TODO map
 
-- `src/routeforge/runtime/observability.py`: readiness and telemetry helpers.
-- `src/routeforge/labs/exercises.py`: operations health + telemetry scenario.
+Primary target for this stage:
+
+- File: `src/routeforge/runtime/observability.py`
+- Symbols: `emit_telemetry`
+- Why this target: Emit deterministic telemetry payloads with stable ordering.
+- Stage check: `routeforge check lab26`
+
+Suggested student walkthrough:
+
+1. `git switch student`
+2. `routeforge show lab26_observability_and_ops`
+3. Edit only the listed symbols in `src/routeforge/runtime/observability.py`.
+4. Run `routeforge check lab26` until it exits with status `0`.
+5. Run `routeforge run lab26_observability_and_ops --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
 ## Verification commands and expected outputs
 
 ```bash
-PYTHONPATH=src python -m routeforge run lab26_observability_and_ops --completed <all-labs-lab01-through-lab25>
+routeforge show lab26_observability_and_ops
+routeforge check lab26
+
+STATE=/tmp/routeforge-progress.json
+routeforge run lab26_observability_and_ops --state-file "$STATE"
 ```
 
-Expected:
+Expected outcomes:
 
-- `ops_readiness_check` step `PASS`.
-- `ops_telemetry_emit` step `PASS`.
-- Checkpoints include `OPS_READINESS_CHECK` and `TELEMETRY_EMIT`.
+- `routeforge show` prints `student.stage`, `student.target`, and `student.symbols` matching this chapter.
+- `routeforge check lab26` passes when your implementation is complete for this stage.
+- `ops_readiness_check` should print `[PASS]` (service health checks produce deterministic readiness status).
+- `ops_telemetry_emit` should print `[PASS]` (telemetry export emits sorted counter payload for reproducible parsing).
+- Run output includes checkpoints: OPS_READINESS_CHECK, TELEMETRY_EMIT.
 
 ## Debug trace checkpoints and interpretation guidance
 
-- `OPS_READINESS_CHECK`: deterministic pass/fail status per subsystem.
-- `TELEMETRY_EMIT`: sorted counter payload for stable parsing.
+Generate trace artifacts when a step fails:
+
+```bash
+routeforge run lab26_observability_and_ops --state-file "$STATE" --trace-out /tmp/lab26_observability_and_ops.jsonl
+routeforge debug replay --trace /tmp/lab26_observability_and_ops.jsonl
+routeforge debug explain --trace /tmp/lab26_observability_and_ops.jsonl --step ops_readiness_check
+```
+
+Checkpoint guide:
+
+- `OPS_READINESS_CHECK`: Operational telemetry/readiness checks with deterministic outputs.
+- `TELEMETRY_EMIT`: Operational telemetry/readiness checks with deterministic outputs.
 
 ## Failure drills and troubleshooting flow
 
-- Force a failed readiness probe and verify failed check names are listed.
-- Change telemetry counters and confirm structure remains stable.
+- Intentionally break one listed symbol in `src/routeforge/runtime/observability.py` and rerun `routeforge check lab26` to confirm tests catch regressions.
+- If `routeforge run lab26_observability_and_ops --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
+- Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
+- Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.
 
 ## Standards and references
 
-- Operations telemetry and SRE readiness-check design patterns.
+- Operational readiness checks, telemetry hygiene, and deterministic output contracts.
+

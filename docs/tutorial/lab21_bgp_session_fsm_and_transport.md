@@ -2,46 +2,79 @@
 
 ## Learning objectives
 
-- Model deterministic BGP FSM transitions from `IDLE` to `ESTABLISHED`.
-- Validate OPEN/KEEPALIVE sequencing behavior.
-- Observe transport-timer reset behavior (hold timer expiry).
+- Implement `bgp_session_transition` in `src/routeforge/runtime/bgp.py`.
+- Deliver `bgp_open_and_establish`: BGP OPEN and KEEPALIVE events transition the session to ESTABLISHED.
+- Deliver `bgp_hold_timer_reset`: hold timer expiry returns the BGP session to IDLE.
+- Validate internal behavior through checkpoints: BGP_OPEN_RX, BGP_SESSION_CHANGE.
 
 ## Prerequisite recap
 
-- Complete `lab20_qos_marking_and_queueing`.
-- Recall TCP session establishment from `lab16_udp_tcp_fundamentals`.
+- Required prior labs: lab20_qos_marking_and_queueing.
+- Confirm target mapping before coding with `routeforge show lab21_bgp_session_fsm_and_transport`.
+- Work on the `student` branch so you are editing TODO stubs, not solved reference code.
 
 ## Concept walkthrough
 
-`lab21` starts the BGP track. The scenario models a minimal FSM path (`IDLE -> CONNECT -> OPENSENT -> ESTABLISHED`) and timer-driven fallback to `IDLE`.
+BGP session lifecycle and timer-driven reset behavior. Student-mode coding target for this stage is `src/routeforge/runtime/bgp.py` (`bgp_session_transition`).
 
 ## Implementation TODO map
 
-- `src/routeforge/runtime/bgp.py`: BGP FSM transition helper.
-- `src/routeforge/labs/exercises.py`: session establish/reset lab scenario.
+Primary target for this stage:
+
+- File: `src/routeforge/runtime/bgp.py`
+- Symbols: `bgp_session_transition`
+- Why this target: Drive BGP session FSM transitions.
+- Stage check: `routeforge check lab21`
+
+Suggested student walkthrough:
+
+1. `git switch student`
+2. `routeforge show lab21_bgp_session_fsm_and_transport`
+3. Edit only the listed symbols in `src/routeforge/runtime/bgp.py`.
+4. Run `routeforge check lab21` until it exits with status `0`.
+5. Run `routeforge run lab21_bgp_session_fsm_and_transport --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
 ## Verification commands and expected outputs
 
 ```bash
-PYTHONPATH=src python -m routeforge run lab21_bgp_session_fsm_and_transport --completed <all-labs-lab01-through-lab20>
+routeforge show lab21_bgp_session_fsm_and_transport
+routeforge check lab21
+
+STATE=/tmp/routeforge-progress.json
+routeforge run lab21_bgp_session_fsm_and_transport --state-file "$STATE"
 ```
 
-Expected:
+Expected outcomes:
 
-- `bgp_open_and_establish` step `PASS`.
-- `bgp_hold_timer_reset` step `PASS`.
-- Checkpoints include `BGP_OPEN_RX` and `BGP_SESSION_CHANGE`.
+- `routeforge show` prints `student.stage`, `student.target`, and `student.symbols` matching this chapter.
+- `routeforge check lab21` passes when your implementation is complete for this stage.
+- `bgp_open_and_establish` should print `[PASS]` (BGP OPEN and KEEPALIVE events transition the session to ESTABLISHED).
+- `bgp_hold_timer_reset` should print `[PASS]` (hold timer expiry returns the BGP session to IDLE).
+- Run output includes checkpoints: BGP_OPEN_RX, BGP_SESSION_CHANGE.
 
 ## Debug trace checkpoints and interpretation guidance
 
-- `BGP_OPEN_RX`: OPEN message received and accepted.
-- `BGP_SESSION_CHANGE`: FSM transition occurred.
+Generate trace artifacts when a step fails:
+
+```bash
+routeforge run lab21_bgp_session_fsm_and_transport --state-file "$STATE" --trace-out /tmp/lab21_bgp_session_fsm_and_transport.jsonl
+routeforge debug replay --trace /tmp/lab21_bgp_session_fsm_and_transport.jsonl
+routeforge debug explain --trace /tmp/lab21_bgp_session_fsm_and_transport.jsonl --step bgp_open_and_establish
+```
+
+Checkpoint guide:
+
+- `BGP_OPEN_RX`: BGP session lifecycle and timer-driven reset behavior.
+- `BGP_SESSION_CHANGE`: BGP session lifecycle and timer-driven reset behavior.
 
 ## Failure drills and troubleshooting flow
 
-- Trigger `NOTIFICATION_RX` or hold-timer expiry and confirm reset to `IDLE`.
-- Skip KEEPALIVE handling and confirm the session never reaches `ESTABLISHED`.
+- Intentionally break one listed symbol in `src/routeforge/runtime/bgp.py` and rerun `routeforge check lab21` to confirm tests catch regressions.
+- If `routeforge run lab21_bgp_session_fsm_and_transport --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
+- Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
+- Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.
 
 ## Standards and references
 
-- RFC 4271 (BGP-4), session state and message handling model.
+- RFC 4271 (BGP-4).
+
