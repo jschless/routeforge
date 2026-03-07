@@ -162,6 +162,7 @@ Use this order:
 ## Where To Find Targets and Walkthroughs
 
 - Lab-by-lab coding targets: [student_task_map.md](student_task_map.md)
+- Function signatures + required checkpoints: [function_contracts.md](function_contracts.md)
 - Full chapter walkthroughs: [tutorial](tutorial)
 - Start here: [Lab 01](tutorial/lab01_frame_and_headers.md)
 

@@ -14,6 +14,7 @@ nav:
   - Home: index.md
   - Getting Started: getting_started.md
   - Student Task Map: student_task_map.md
+  - Function Contracts: function_contracts.md
   - Architecture:
       - Redesign: routeforge_redesign.md
       - Bridge Contract: bridge_contract.md

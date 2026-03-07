@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import importlib
+import inspect
 from pathlib import Path
 from typing import Any
 
@@ -78,3 +80,36 @@ def load_student_targets(path: Path | None = None) -> dict[str, StudentTarget]:
 
 def student_target_for_lab(lab_id: str, path: Path | None = None) -> StudentTarget | None:
     return load_student_targets(path).get(lab_id)
+
+
+def _path_to_module(path: str) -> str:
+    normalized = path.strip().removeprefix("src/").removesuffix(".py")
+    return normalized.replace("/", ".")
+
+
+def _resolve_symbol_signature(*, module_name: str, symbol: str) -> str:
+    module = importlib.import_module(module_name)
+    parts = symbol.split(".")
+    target: Any = module
+    for part in parts:
+        target = getattr(target, part)
+    signature = inspect.signature(target)
+    return_annotation = signature.return_annotation
+    if return_annotation is inspect.Signature.empty:
+        rendered_return = "Any"
+    elif isinstance(return_annotation, str):
+        rendered_return = return_annotation
+    else:
+        rendered_return = getattr(return_annotation, "__name__", str(return_annotation))
+    return f"{symbol}{signature} -> {rendered_return}"
+
+
+def signatures_for_target(target: StudentTarget) -> tuple[str, ...]:
+    module_name = _path_to_module(target.path)
+    signatures: list[str] = []
+    for symbol in target.symbols:
+        try:
+            signatures.append(_resolve_symbol_signature(module_name=module_name, symbol=symbol))
+        except Exception:
+            signatures.append(f"{symbol}(...) -> unknown")
+    return tuple(signatures)

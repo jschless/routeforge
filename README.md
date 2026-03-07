@@ -91,6 +91,7 @@ routeforge report --state-file "$STATE"
 - `docs/routeforge_redesign.md`
 - `docs/getting_started.md`
 - `docs/student_task_map.md`
+- `docs/function_contracts.md`
 - `docs/bridge_contract.md`
 - `labs/conformance_matrix.yaml`
 - `labs/student_targets.yaml`

@@ -15,8 +15,8 @@ targets:
     stage: 2
     path: src/routeforge/runtime/dataplane_sim.py
     symbols:
-      - DataplaneSim._select_known_unicast_egress
-    summary: Select deterministic egress for known unicast frames.
+      - DataplaneSim._determine_forwarding_plan
+    summary: Build deterministic L2 forwarding plans for flood, known-unicast, and same-port drops.
 
   - lab_id: lab03_vlan_and_trunks
     stage: 3

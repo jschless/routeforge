@@ -18,6 +18,7 @@ def test_show_command_includes_conformance(capsys) -> None:
     assert "conformance.must: L2_FRAME_VALIDATION" in output
     assert "student.stage: 1" in output
     assert "student.target: src/routeforge/model/packet.py" in output
+    assert "student.signatures:" in output
 
 
 def test_run_command_blocks_unmet_prereqs(capsys) -> None:

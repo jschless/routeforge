@@ -6,6 +6,7 @@ RouteForge is a CCNP-depth networking workbook with deterministic labs, checkpoi
 
 - [Getting Started](getting_started.md)
 - [Student Task Map](student_task_map.md)
+- [Function Contracts](function_contracts.md)
 - [RouteForge Redesign](routeforge_redesign.md)
 - [Bridge Contract](bridge_contract.md)
 - [Execution Plan](execution_plan.md)
