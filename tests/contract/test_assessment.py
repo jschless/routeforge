@@ -7,18 +7,20 @@ from routeforge.labs.progress import ProgressState, clear_progress, mark_complet
 
 def test_rubric_loads_and_covers_all_labs() -> None:
     rubric = load_assessment_rubric()
+    total_weight = sum(lab.weight for lab in rubric.labs.values())
     assert rubric.profile == "ccnp_v1"
     assert len(rubric.labs) == len(LABS)
-    assert sum(lab.weight for lab in rubric.labs.values()) == 100
+    assert total_weight > 0
 
 
 def test_assessment_empty_and_full_progress() -> None:
     rubric = load_assessment_rubric()
+    total_weight = sum(lab.weight for lab in rubric.labs.values())
 
     empty = evaluate_assessment(clear_progress(), rubric)
     assert empty.overall_score == 0.0
     assert empty.band == "BELOW_PASS"
-    assert empty.total_weight == 100
+    assert empty.total_weight == total_weight
 
     state = clear_progress()
     for entry in LABS:

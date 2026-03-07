@@ -92,3 +92,39 @@ labs:
   lab27_capstone_incident_drill:
     weight: 4
     category: integration_capstone
+  lab28_dhcp_snooping_and_dai:
+    weight: 2
+    category: phase2_security_qos
+  lab29_port_security_and_ip_source_guard:
+    weight: 2
+    category: phase2_security_qos
+  lab30_qos_policing_and_shaping:
+    weight: 2
+    category: phase2_security_qos
+  lab31_qos_congestion_avoidance_wred:
+    weight: 2
+    category: phase2_security_qos
+  lab32_route_redistribution_and_loop_prevention:
+    weight: 2
+    category: phase2_routing_ipv6_mpls
+  lab33_fhrp_tracking_and_failover:
+    weight: 2
+    category: phase2_routing_ipv6_mpls
+  lab34_ipv6_nd_slaac_and_ra_guard:
+    weight: 2
+    category: phase2_routing_ipv6_mpls
+  lab35_ospfv3_adjacency_and_lsdb:
+    weight: 2
+    category: phase2_routing_ipv6_mpls
+  lab36_mpbgp_ipv6_unicast:
+    weight: 2
+    category: phase2_routing_ipv6_mpls
+  lab37_mpls_ldp_label_forwarding:
+    weight: 2
+    category: phase2_routing_ipv6_mpls
+  lab38_l3vpn_vrf_and_route_targets:
+    weight: 2
+    category: phase2_routing_ipv6_mpls
+  lab39_bgp_evpn_vxlan_basics:
+    weight: 2
+    category: phase2_routing_ipv6_mpls

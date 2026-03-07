@@ -39,6 +39,18 @@ LABS: list[LabEntry] = [
     {"id": "lab25_tunnels_and_ipsec", "title": "Tunnels and IPsec", "prereqs": ["lab24_bgp_scaling_patterns"]},
     {"id": "lab26_observability_and_ops", "title": "Observability and Operations", "prereqs": ["lab25_tunnels_and_ipsec"]},
     {"id": "lab27_capstone_incident_drill", "title": "Capstone Incident Drill", "prereqs": ["lab26_observability_and_ops"]},
+    {"id": "lab28_dhcp_snooping_and_dai", "title": "DHCP Snooping and DAI", "prereqs": ["lab27_capstone_incident_drill"]},
+    {"id": "lab29_port_security_and_ip_source_guard", "title": "Port Security and IP Source Guard", "prereqs": ["lab28_dhcp_snooping_and_dai"]},
+    {"id": "lab30_qos_policing_and_shaping", "title": "QoS Policing and Shaping", "prereqs": ["lab29_port_security_and_ip_source_guard"]},
+    {"id": "lab31_qos_congestion_avoidance_wred", "title": "QoS Congestion Avoidance (WRED)", "prereqs": ["lab30_qos_policing_and_shaping"]},
+    {"id": "lab32_route_redistribution_and_loop_prevention", "title": "Route Redistribution and Loop Prevention", "prereqs": ["lab31_qos_congestion_avoidance_wred"]},
+    {"id": "lab33_fhrp_tracking_and_failover", "title": "FHRP Tracking and Failover", "prereqs": ["lab32_route_redistribution_and_loop_prevention"]},
+    {"id": "lab34_ipv6_nd_slaac_and_ra_guard", "title": "IPv6 ND, SLAAC, and RA Guard", "prereqs": ["lab33_fhrp_tracking_and_failover"]},
+    {"id": "lab35_ospfv3_adjacency_and_lsdb", "title": "OSPFv3 Adjacency and LSDB", "prereqs": ["lab34_ipv6_nd_slaac_and_ra_guard"]},
+    {"id": "lab36_mpbgp_ipv6_unicast", "title": "MP-BGP IPv6 Unicast", "prereqs": ["lab35_ospfv3_adjacency_and_lsdb"]},
+    {"id": "lab37_mpls_ldp_label_forwarding", "title": "MPLS LDP and Label Forwarding", "prereqs": ["lab36_mpbgp_ipv6_unicast"]},
+    {"id": "lab38_l3vpn_vrf_and_route_targets", "title": "L3VPN VRF and Route Targets", "prereqs": ["lab37_mpls_ldp_label_forwarding"]},
+    {"id": "lab39_bgp_evpn_vxlan_basics", "title": "BGP EVPN VXLAN Basics", "prereqs": ["lab38_l3vpn_vrf_and_route_targets"]},
 ]
 
 

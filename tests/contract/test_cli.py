@@ -1,6 +1,9 @@
 import json
 
+import pytest
+
 from routeforge.cli import main
+from routeforge.labs.assessment import load_assessment_rubric
 from routeforge.labs.manifest import LABS
 
 
@@ -127,21 +130,16 @@ def test_check_command_rejects_unknown_target(capsys) -> None:
 def test_check_command_uses_stage_limit(monkeypatch, capsys) -> None:
     captured: dict[str, object] = {}
 
-    class _Completed:
-        returncode = 0
+    def _fake_run_staged_student_checks(*, stage_max: int, repo_root):  # type: ignore[no-untyped-def]
+        captured["stage_max"] = stage_max
+        captured["repo_root"] = repo_root
+        return 0
 
-    def _fake_run(command, *, cwd, check):  # type: ignore[no-untyped-def]
-        captured["command"] = command
-        captured["cwd"] = cwd
-        captured["check"] = check
-        return _Completed()
-
-    monkeypatch.setattr("routeforge.cli.subprocess.run", _fake_run)
+    monkeypatch.setattr("routeforge.cli.run_staged_student_checks", _fake_run_staged_student_checks)
     assert main(["check", "lab01"]) == 0
     output = capsys.readouterr().out
     assert "stage_max=1" in output
-    assert captured["command"][-1] == "1"
-    assert captured["check"] is False
+    assert captured["stage_max"] == 1
 
 
 def test_run_command_writes_trace(tmp_path) -> None:
@@ -176,10 +174,11 @@ def test_debug_replay_and_explain(tmp_path, capsys) -> None:
 
 def test_progress_show_mark_reset_and_report(tmp_path, capsys) -> None:
     state = tmp_path / "progress.json"
+    total_labs = len(LABS)
 
     assert main(["progress", "show", "--state-file", str(state)]) == 0
     output = capsys.readouterr().out
-    assert "labs.completed: 0/27" in output
+    assert f"labs.completed: 0/{total_labs}" in output
     assert "labs.unlocked: lab01_frame_and_headers" in output
 
     assert main(["progress", "mark", "lab01_frame_and_headers", "--state-file", str(state)]) == 0
@@ -188,7 +187,7 @@ def test_progress_show_mark_reset_and_report(tmp_path, capsys) -> None:
 
     assert main(["report", "--state-file", str(state)]) == 0
     report_out = capsys.readouterr().out
-    assert "labs.completed: 1/27" in report_out
+    assert f"labs.completed: 1/{total_labs}" in report_out
     assert "assessment.score:" in report_out
     assert "assessment.band:" in report_out
     assert "assessment.remediation_docs:" in report_out
@@ -201,13 +200,14 @@ def test_progress_show_mark_reset_and_report(tmp_path, capsys) -> None:
 
 def test_run_with_state_file_updates_progress(tmp_path, capsys) -> None:
     state = tmp_path / "progress.json"
+    total_labs = len(LABS)
     assert main(["run", "lab01_frame_and_headers", "--state-file", str(state)]) == 0
     run_out = capsys.readouterr().out
     assert "progress updated:" in run_out
 
     assert main(["progress", "show", "--state-file", str(state)]) == 0
     show_out = capsys.readouterr().out
-    assert "labs.completed: 1/27" in show_out
+    assert f"labs.completed: 1/{total_labs}" in show_out
 
 
 def test_run_uses_saved_progress_for_prereqs(tmp_path, capsys) -> None:
@@ -224,6 +224,10 @@ def test_run_uses_saved_progress_for_prereqs(tmp_path, capsys) -> None:
 def test_report_writes_json_output(tmp_path, capsys) -> None:
     state = tmp_path / "progress.json"
     report = tmp_path / "report.json"
+    rubric = load_assessment_rubric()
+    total_weight = sum(lab.weight for lab in rubric.labs.values())
+    lab01_weight = rubric.labs["lab01_frame_and_headers"].weight
+
     assert main(["progress", "mark", "lab01_frame_and_headers", "--state-file", str(state)]) == 0
     capsys.readouterr()
 
@@ -234,7 +238,8 @@ def test_report_writes_json_output(tmp_path, capsys) -> None:
     payload = json.loads(report.read_text(encoding="utf-8"))
     assert payload["labs"]["completed"] == 1
     assert payload["labs"]["unlocked_ids"] == ["lab02_mac_learning_switch"]
-    assert payload["assessment"]["overall_score"] == 3.0
+    expected_score = 100.0 * lab01_weight / total_weight
+    assert payload["assessment"]["overall_score"] == pytest.approx(expected_score)
     assert payload["assessment"]["band"] == "BELOW_PASS"
     assert payload["assessment"]["remediation_docs"] == []
     assert payload["capstone_ready"] is False

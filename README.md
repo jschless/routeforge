@@ -13,7 +13,7 @@ Both run on a shared deterministic scheduler and exchange typed bridge messages.
 
 Phase 0 architecture contracts are implemented.
 
-Phase 1 student loop is available for:
+Phase 1 + Phase 2 student loop is available for:
 
 - `lab01_frame_and_headers`
 - `lab02_mac_learning_switch`
@@ -42,6 +42,18 @@ Phase 1 student loop is available for:
 - `lab25_tunnels_and_ipsec`
 - `lab26_observability_and_ops`
 - `lab27_capstone_incident_drill`
+- `lab28_dhcp_snooping_and_dai`
+- `lab29_port_security_and_ip_source_guard`
+- `lab30_qos_policing_and_shaping`
+- `lab31_qos_congestion_avoidance_wred`
+- `lab32_route_redistribution_and_loop_prevention`
+- `lab33_fhrp_tracking_and_failover`
+- `lab34_ipv6_nd_slaac_and_ra_guard`
+- `lab35_ospfv3_adjacency_and_lsdb`
+- `lab36_mpbgp_ipv6_unicast`
+- `lab37_mpls_ldp_label_forwarding`
+- `lab38_l3vpn_vrf_and_route_targets`
+- `lab39_bgp_evpn_vxlan_basics`
 
 Progress and readiness reporting are available via CLI:
 
@@ -111,6 +123,18 @@ routeforge report --state-file "$STATE"
 - `docs/tutorial/lab25_tunnels_and_ipsec.md`
 - `docs/tutorial/lab26_observability_and_ops.md`
 - `docs/tutorial/lab27_capstone_incident_drill.md`
+- `docs/tutorial/lab28_dhcp_snooping_and_dai.md`
+- `docs/tutorial/lab29_port_security_and_ip_source_guard.md`
+- `docs/tutorial/lab30_qos_policing_and_shaping.md`
+- `docs/tutorial/lab31_qos_congestion_avoidance_wred.md`
+- `docs/tutorial/lab32_route_redistribution_and_loop_prevention.md`
+- `docs/tutorial/lab33_fhrp_tracking_and_failover.md`
+- `docs/tutorial/lab34_ipv6_nd_slaac_and_ra_guard.md`
+- `docs/tutorial/lab35_ospfv3_adjacency_and_lsdb.md`
+- `docs/tutorial/lab36_mpbgp_ipv6_unicast.md`
+- `docs/tutorial/lab37_mpls_ldp_label_forwarding.md`
+- `docs/tutorial/lab38_l3vpn_vrf_and_route_targets.md`
+- `docs/tutorial/lab39_bgp_evpn_vxlan_basics.md`
 
 ## GitHub Pages
 

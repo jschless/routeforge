@@ -12,7 +12,7 @@ You learn by implementing specific functions in real source files, then proving 
 
 Core components:
 
-- 27 ordered labs (`lab01` to `lab27`)
+- 39 ordered labs (`lab01` to `lab39`)
 - deterministic checkpoints for debug visibility
 - prerequisite gating between labs
 - progress/readiness reporting
