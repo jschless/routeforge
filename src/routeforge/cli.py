@@ -367,7 +367,11 @@ def _cmd_tdl_run(challenge_id: str, state_file: Path | None) -> int:
         print(f"blocked: {challenge_id} has unmet prerequisites: {', '.join(unmet)}")
         return 2
 
-    result = run_tdl_challenge(challenge_id)
+    try:
+        result = run_tdl_challenge(challenge_id)
+    except NotImplementedError as exc:
+        print(f"challenge implementation missing: {exc}")
+        return 4
     print(f"running tdl challenge: {challenge_id}")
     for step in result.steps:
         status = "PASS" if step.passed else "FAIL"
