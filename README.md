@@ -90,6 +90,7 @@ routeforge debug explain --trace /tmp/lab01-trace.jsonl --step invalid_frame_dro
 ## Documentation
 
 - `docs/routeforge_redesign.md`
+- `docs/getting_started.md`
 - `docs/bridge_contract.md`
 - `labs/conformance_matrix.yaml`
 - `labs/assessment_rubric.yaml`
