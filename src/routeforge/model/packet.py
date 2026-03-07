@@ -15,8 +15,9 @@ def normalize_mac(value: str) -> str:
 
 
 def is_valid_mac(value: str) -> bool:
-    # TODO(student): return True only for valid colon-delimited MAC addresses.
-    raise NotImplementedError("TODO: implement is_valid_mac")
+    if re.match(MAC_RE, normalize_mac(value)):
+        return True
+    return False
 
 
 @dataclass(frozen=True)
@@ -26,8 +27,20 @@ class IPv4Header:
     ttl: int = 64
 
     def validate(self) -> list[str]:
-        # TODO(student): validate src_ip, dst_ip, and ttl. Return error codes.
-        raise NotImplementedError("TODO: implement IPv4Header.validate")
+        import ipaddress
+
+        errs = []
+        try:
+            ipaddress.IPv4Address(self.src_ip)
+        except Exception:
+            errs.append("L3_INVALID_SRC_IP")
+        try:
+            ipaddress.IPv4Address(self.dst_ip)
+        except Exception:
+            errs.append("L3_INVALID_DST_IP")
+        if self.ttl <= 1:
+            errs.append("L3_INVALID_TTL")
+        return errs
 
 
 @dataclass(frozen=True)
@@ -49,4 +62,20 @@ class EthernetFrame:
 
     def validate(self) -> list[str]:
         # TODO(student): validate L2 MACs/ethertype/VLAN and extend with payload errors.
-        raise NotImplementedError("TODO: implement EthernetFrame.validate")
+        # L2_INVALID_SRC_MAC, L2_INVALID_DST_MAC, L2_UNSUPPORTED_ETHERTYPE, L2_INVALID_VLAN, L3_INVALID_SRC_IP, L3_INVALID_DST_IP, L3_INVALID_TTL.
+        errs = []
+        if not is_valid_mac(self.src_mac):
+            errs.append("L2_INVALID_SRC_MAC")
+        if not is_valid_mac(self.dst_mac):
+            errs.append("L2_INVALID_DST_MAC")
+        # BUG(student): operator precedence error — parses as `(not (ethertype >= 0)) and ethertype < 65536`.
+        # This only rejects negative values; ethertypes >= 65536 pass silently.
+        # TODO(student): fix to `if not (0 <= self.ethertype < 65536):` to enforce the full valid range.
+        if not self.ethertype >= 0 and self.ethertype < 65536:
+            errs.append("L2_UNSUPPORTED_ETHERTYPE")
+        if not len(self.payload.validate()) == 0:
+            for err in self.payload.validate():
+                errs.append(err)
+        if self.vlan_id is not None and (self.vlan_id <= 0 or self.vlan_id > 4094):
+            errs.append("L2_INVALID_VLAN")
+        return errs

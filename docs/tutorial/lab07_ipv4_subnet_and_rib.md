@@ -14,7 +14,38 @@
 
 ## Concept walkthrough
 
-Connected/static route install and deterministic LPM selection. Student-mode coding target for this stage is `src/routeforge/runtime/l3.py` (`RibTable.lookup`).
+### What is the RIB and why LPM?
+
+The Routing Information Base (RIB) is a router's table of all known routes.  When a packet arrives, the router must pick the *best* matching route.  More specific routes (longer prefix) take priority over general routes — this is *Longest Prefix Match (LPM)*.
+
+For example, with these routes installed:
+```
+10.0.0.0/8    via 192.168.1.1  (default route catch-all)
+10.1.0.0/16   via 192.168.1.2  (more specific)
+10.1.1.0/24   via 192.168.1.3  (most specific)
+```
+
+A packet to `10.1.1.50` matches all three, but `/24` wins — it's the longest (most specific) match.
+
+### Tiebreak chain
+
+When multiple routes have the same prefix length, apply in order:
+
+1. **Lowest admin_distance** — static routes (AD 1) beat OSPF (AD 110) beat BGP (AD 200).
+2. **Lowest metric** — within the same protocol, lower metric wins.
+3. **Lowest next_hop** — lexicographic string compare for determinism.
+
+### What correct behavior looks like
+
+```python
+rib = RibTable()
+rib.install(RouteEntry(prefix="10.0.0.0", prefix_len=8,  next_hop="192.168.1.1", ...))
+rib.install(RouteEntry(prefix="10.1.1.0", prefix_len=24, next_hop="192.168.1.3", ...))
+result = rib.lookup("10.1.1.50")
+# result.prefix_len == 24, result.next_hop == "192.168.1.3"
+```
+
+Student-mode coding target for this stage is `src/routeforge/runtime/l3.py` (`RibTable.lookup`).
 
 ## Implementation TODO map
 
@@ -62,9 +93,15 @@ routeforge debug explain --trace /tmp/lab07_ipv4_subnet_and_rib.jsonl --step rib
 
 Checkpoint guide:
 
-- `RIB_ROUTE_INSTALL`: Connected/static route install and deterministic LPM selection.
-- `ROUTE_LOOKUP`: Connected/static route install and deterministic LPM selection.
-- `ROUTE_SELECT`: Connected/static route install and deterministic LPM selection.
+- `RIB_ROUTE_INSTALL`: A route entry was successfully installed in the RIB via `install()`.
+  This is pre-populated by the lab scenario — if missing, check the test setup rather than
+  your `lookup()` implementation.
+- `ROUTE_LOOKUP`: `lookup()` was called for a destination IP.  If missing, the scenario
+  didn't reach the lookup step — a prior step likely failed.
+- `ROUTE_SELECT`: `lookup()` returned a non-None route that was used for the forwarding
+  decision.  If this checkpoint is missing but `ROUTE_LOOKUP` fired, your `lookup()`
+  returned `None` when a match should exist.  Check that your prefix matching logic covers
+  all candidate routes (don't return early after the first match).
 
 ## Failure drills and troubleshooting flow
 

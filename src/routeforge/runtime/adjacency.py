@@ -18,5 +18,15 @@ class ArpAdjacencyTable:
         raise NotImplementedError("TODO: implement ArpAdjacencyTable.queue_packet")
 
     def resolve(self, *, next_hop_ip: str, mac: str) -> list[str]:
-        # TODO(student): install ARP cache entry and release pending packets.
+        """Install an ARP cache entry and release all queued packets.
+
+        Steps:
+        1. Store ``mac`` in ``self.cache`` keyed by ``next_hop_ip``.
+        2. Pop and return all packet IDs from ``self.pending_packets[next_hop_ip]``
+           (the queue built by ``queue_packet``).
+        3. Remove the ``next_hop_ip`` key from ``self.pending_packets``.
+        4. Return the list of released packet IDs (may be empty if nothing was queued).
+
+        # TODO(student): implement ArpAdjacencyTable.resolve.
+        """
         raise NotImplementedError("TODO: implement ArpAdjacencyTable.resolve")

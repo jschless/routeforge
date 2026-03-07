@@ -29,7 +29,25 @@ class RibTable:
         self.routes.append(route)
 
     def lookup(self, destination_ip: str) -> RouteEntry | None:
-        # TODO(student): return best route via deterministic longest-prefix match policy.
+        """Return the best matching route for ``destination_ip``, or None.
+
+        Tiebreak chain (apply in order; first difference wins):
+
+        1. **Longest prefix length** — higher ``prefix_len`` wins (most specific).
+        2. **Lowest admin_distance** — lower value wins (more trusted protocol).
+        3. **Lowest metric** — lower value wins (shorter path).
+        4. **Lowest next_hop** — lexicographic string compare; lower wins.
+
+        Return ``None`` if no route matches.
+
+        Use ``route.network`` (an ``IPv4Network``) and its ``.supernet_of()``
+        or the ``in`` operator to test membership, e.g.:
+            ``IPv4Address(destination_ip) in route.network``
+
+        See ``docs/tutorial/lab07_ipv4_subnet_and_rib.md`` for the walkthrough.
+
+        # TODO(student): implement RibTable.lookup using the tiebreak chain above.
+        """
         raise NotImplementedError("TODO: implement RibTable.lookup")
 
 
@@ -52,7 +70,24 @@ class ForwardingDecision:
 
 
 def forward_packet(packet: IPv4Packet, route: RouteEntry | None) -> ForwardingDecision:
-    # TODO(student): implement forwarding/drop decision with TTL behavior.
+    """Decide how to forward or drop an IPv4 packet.
+
+    Rules (apply in order):
+
+    1. If ``route`` is None:
+       return ``ForwardingDecision(action="DROP", reason="NO_ROUTE",
+       ttl_after=None, out_if=None, next_hop=None)``.
+
+    2. If ``packet.ttl <= 1`` (TTL exhausted before decrement):
+       return ``ForwardingDecision(action="DROP", reason="TTL_EXPIRED",
+       ttl_after=None, out_if=None, next_hop=None)``.
+
+    3. Otherwise (normal forward): decrement TTL by 1 and return
+       ``ForwardingDecision(action="FORWARD", reason="ROUTE_FOUND",
+       ttl_after=packet.ttl - 1, out_if=route.out_if, next_hop=route.next_hop)``.
+
+    # TODO(student): implement forward_packet using the rules above.
+    """
     raise NotImplementedError("TODO: implement forward_packet")
 
 
@@ -64,10 +99,39 @@ class IcmpControlDecision:
 
 
 def icmp_control(packet: IPv4Packet, route: RouteEntry | None) -> IcmpControlDecision:
-    # TODO(student): implement deterministic ICMP control-plane response logic.
+    """Determine the ICMP control-plane response for a received packet.
+
+    Rules (apply in order):
+
+    1. TTL expired (``packet.ttl <= 1``):
+       ``IcmpControlDecision(action="SEND_ICMP", reason="TTL_EXPIRED",
+       icmp_type="TIME_EXCEEDED")``.
+
+    2. No route (``route is None``):
+       ``IcmpControlDecision(action="SEND_ICMP", reason="NO_ROUTE",
+       icmp_type="DEST_UNREACHABLE")``.
+
+    3. Echo request (``packet.icmp_type == "ECHO_REQUEST"``):
+       ``IcmpControlDecision(action="SEND_ICMP", reason="ECHO_REPLY",
+       icmp_type="ECHO_REPLY")``.
+
+    4. Otherwise:
+       ``IcmpControlDecision(action="FORWARD", reason="ROUTE_FOUND",
+       icmp_type="NONE")``.
+
+    # TODO(student): implement icmp_control using the rules above.
+    """
     raise NotImplementedError("TODO: implement icmp_control")
 
 
 def explain_drop(decision: ForwardingDecision) -> str:
-    # TODO(student): explain drop decisions in a stable machine-readable string.
+    """Return a stable, machine-readable string explaining a DROP decision.
+
+    Format: ``"DROP:<reason>"`` where ``reason`` is ``decision.reason``.
+    Example: ``"DROP:NO_ROUTE"`` or ``"DROP:TTL_EXPIRED"``.
+
+    If ``decision.action != "DROP"``, return ``"NOT_A_DROP"``.
+
+    # TODO(student): implement explain_drop.
+    """
     raise NotImplementedError("TODO: implement explain_drop")

@@ -15,7 +15,24 @@
 
 ## Concept walkthrough
 
-Topology change handling and protection semantics. Student-mode coding target for this stage is `src/routeforge/runtime/stp.py` (`role_changes, bpdu_guard_decision`).
+### STP topology change (re-convergence)
+
+When a link fails, the bridges on adjacent segments detect the loss and must re-run STP to elect a new tree.  This lab simulates that by removing a link with `remove_link()` and calling `compute_stp()` again — an *alternate* port that was blocking can become the new designated or root port.
+
+### BPDU Guard
+
+*Edge ports* connect to end-hosts (PCs, servers), not to other switches.  End-hosts should never send BPDUs.  If a BPDU arrives on an edge port, it means someone connected a rogue switch — BPDU Guard shuts the port down immediately (`ERR_DISABLE`) to prevent loops.
+
+### What correct behavior looks like
+
+- `bpdu_guard_decision(port=("sw1","eth0"), edge_port=True, bpdu_received=True)`:
+  → `GuardDecision(port=("sw1","eth0"), action="ERR_DISABLE", reason="BPDU_GUARD_VIOLATION")`
+- `bpdu_guard_decision(port=("sw1","eth1"), edge_port=True, bpdu_received=False)`:
+  → `GuardDecision(port=("sw1","eth1"), action="ALLOW", reason="OK")`
+- `bpdu_guard_decision(port=("sw1","eth2"), edge_port=False, bpdu_received=True)`:
+  → `GuardDecision(port=("sw1","eth2"), action="ALLOW", reason="OK")` (non-edge, expected to see BPDUs)
+
+Student-mode coding target for this stage is `src/routeforge/runtime/stp.py` (`bpdu_guard_decision`).
 
 ## Implementation TODO map
 
@@ -71,8 +88,13 @@ routeforge debug explain --trace /tmp/lab05_stp_convergence_and_protection.jsonl
 
 Checkpoint guide:
 
-- `STP_TOPOLOGY_CHANGE`: Topology change handling and protection semantics.
-- `STP_GUARD_ACTION`: Topology change handling and protection semantics.
+- `STP_TOPOLOGY_CHANGE`: Re-convergence completed after a link removal — `role_changes()`
+  detected that at least one port changed role (e.g., ALTERNATE → DESIGNATED).  If missing,
+  `compute_stp()` may be returning identical roles as before the link was removed, or
+  `role_changes()` is not being called to detect the difference.
+- `STP_GUARD_ACTION`: `bpdu_guard_decision()` produced an `ERR_DISABLE` action for an edge
+  port that received a BPDU.  If missing, check that your implementation returns
+  `ERR_DISABLE` (not `ALLOW`) when `edge_port=True` and `bpdu_received=True`.
 
 ## Failure drills and troubleshooting flow
 

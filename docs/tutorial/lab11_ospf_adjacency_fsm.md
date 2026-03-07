@@ -15,7 +15,52 @@
 
 ## Concept walkthrough
 
-OSPF neighbor state machine and timer behavior. Student-mode coding target for this stage is `src/routeforge/runtime/ospf.py` (`neighbor_hello_transition`).
+### What problem does OSPF adjacency solve?
+
+OSPF routers can only exchange routing information with *adjacent* neighbors — routers they've confirmed are reachable and speaking the same OSPF configuration.  The adjacency FSM (Finite State Machine) tracks whether a neighbor is reachable using *hello* packets sent on a regular interval.  If hellos stop arriving before the *dead timer* expires, the neighbor is declared down and its routes are removed.
+
+### Topology
+
+```
+  Router R1 -------- Router R2
+   (ospf area 0)   (ospf area 0)
+      |                  |
+   eth0              eth0
+```
+
+Two routers on a point-to-point link.  R1's view of R2 is a single neighbor entry tracked by the FSM.
+
+### Simplified FSM (this lab)
+
+This lab uses a two-state model (DOWN / FULL) that captures the essential behavior:
+
+```
+        hello_received=True
+        dead_timer_expired=False
+             ┌──────────┐
+   ┌──────── │          │ ──────────────────────────────────────────┐
+   │  DOWN → │   FULL   │ → DOWN (dead_timer_expired=True)          │
+   │         └──────────┘                                           │
+   │              ↑                                                  │
+   └──────────────┘ (stays FULL on repeated hellos)                 │
+                                                                     │
+   ANY state → DOWN when dead_timer_expired=True ◄───────────────────┘
+```
+
+| current_state | hello_received | dead_timer_expired | next_state |
+|---|---|---|---|
+| any | — | True | DOWN |
+| DOWN | True | False | FULL |
+| FULL | True | False | FULL |
+| any | False | False | unchanged |
+
+### What correct behavior looks like
+
+- `neighbor_hello_transition(current_state="DOWN", hello_received=True, dead_timer_expired=False)` → `"FULL"`
+- `neighbor_hello_transition(current_state="FULL", hello_received=False, dead_timer_expired=True)` → `"DOWN"`
+- `neighbor_hello_transition(current_state="FULL", hello_received=False, dead_timer_expired=False)` → `"FULL"`
+
+Student-mode coding target for this stage is `src/routeforge/runtime/ospf.py` (`neighbor_hello_transition`).
 
 ## Implementation TODO map
 
@@ -64,8 +109,11 @@ routeforge debug explain --trace /tmp/lab11_ospf_adjacency_fsm.jsonl --step ospf
 
 Checkpoint guide:
 
-- `OSPF_HELLO_RX`: OSPF neighbor state machine and timer behavior.
-- `OSPF_NEIGHBOR_CHANGE`: OSPF neighbor state machine and timer behavior.
+- `OSPF_HELLO_RX`: A hello packet was processed and the neighbor state machine was evaluated.
+  If missing, `neighbor_hello_transition` was not called — check the scenario setup.
+- `OSPF_NEIGHBOR_CHANGE`: The neighbor state changed (e.g., DOWN → FULL or FULL → DOWN).
+  If missing when a state change was expected, verify your FSM returns the correct next state
+  instead of the unchanged current state.
 
 ## Failure drills and troubleshooting flow
 

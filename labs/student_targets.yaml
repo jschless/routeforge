@@ -200,7 +200,7 @@ targets:
 
   - lab_id: lab28_dhcp_snooping_and_dai
     stage: 28
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/security.py
     symbols:
       - learn_binding_if_trusted
       - dhcp_snooping_dai
@@ -208,7 +208,7 @@ targets:
 
   - lab_id: lab29_port_security_and_ip_source_guard
     stage: 29
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/security.py
     symbols:
       - update_secure_mac_table
       - port_security_ip_source_guard
@@ -216,7 +216,7 @@ targets:
 
   - lab_id: lab30_qos_policing_and_shaping
     stage: 30
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/qos_advanced.py
     symbols:
       - apply_policer
       - qos_police_shape
@@ -224,7 +224,7 @@ targets:
 
   - lab_id: lab31_qos_congestion_avoidance_wred
     stage: 31
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/qos_advanced.py
     symbols:
       - wred_decision_profile
       - qos_wred_decision
@@ -232,7 +232,7 @@ targets:
 
   - lab_id: lab32_route_redistribution_and_loop_prevention
     stage: 32
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/routing_policy.py
     symbols:
       - build_redistribution_tag
       - redistribute_with_loop_guard
@@ -240,7 +240,7 @@ targets:
 
   - lab_id: lab33_fhrp_tracking_and_failover
     stage: 33
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/routing_policy.py
     symbols:
       - tracked_object_result
       - fhrp_track_failover
@@ -248,7 +248,7 @@ targets:
 
   - lab_id: lab34_ipv6_nd_slaac_and_ra_guard
     stage: 34
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/ipv6.py
     symbols:
       - derive_slaac_host_id
       - ipv6_nd_slaac_ra_guard
@@ -256,7 +256,7 @@ targets:
 
   - lab_id: lab35_ospfv3_adjacency_and_lsdb
     stage: 35
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/ipv6.py
     symbols:
       - ospfv3_neighbor_result
       - ospfv3_adjacency_lsdb
@@ -264,7 +264,7 @@ targets:
 
   - lab_id: lab36_mpbgp_ipv6_unicast
     stage: 36
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/ipv6.py
     symbols:
       - rank_mpbgp_path
       - mpbgp_ipv6_unicast
@@ -272,7 +272,7 @@ targets:
 
   - lab_id: lab37_mpls_ldp_label_forwarding
     stage: 37
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/mpls.py
     symbols:
       - lfib_mapping
       - mpls_ldp_lfib
@@ -280,7 +280,7 @@ targets:
 
   - lab_id: lab38_l3vpn_vrf_and_route_targets
     stage: 38
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/mpls.py
     symbols:
       - vrf_import_action
       - l3vpn_vrf_route_targets
@@ -288,7 +288,7 @@ targets:
 
   - lab_id: lab39_bgp_evpn_vxlan_basics
     stage: 39
-    path: src/routeforge/runtime/phase2.py
+    path: src/routeforge/runtime/mpls.py
     symbols:
       - evpn_type2_entry
       - evpn_vxlan_control

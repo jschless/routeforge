@@ -5,20 +5,28 @@ from __future__ import annotations
 from typing import Callable
 
 from routeforge.labs.contracts import FeatureOutcome, LabRunResult, LabStepResult, build_result
-from routeforge.runtime.phase2 import (
-    MpbgpPath,
+from routeforge.runtime.security import (
     dhcp_snooping_dai,
-    evpn_vxlan_control,
-    fhrp_track_failover,
-    ipv6_nd_slaac_ra_guard,
-    l3vpn_vrf_route_targets,
-    mpls_ldp_lfib,
-    mpbgp_ipv6_unicast,
-    ospfv3_adjacency_lsdb,
     port_security_ip_source_guard,
+)
+from routeforge.runtime.qos_advanced import (
     qos_police_shape,
     qos_wred_decision,
+)
+from routeforge.runtime.routing_policy import (
+    fhrp_track_failover,
     redistribute_with_loop_guard,
+)
+from routeforge.runtime.ipv6 import (
+    MpbgpPath,
+    ipv6_nd_slaac_ra_guard,
+    mpbgp_ipv6_unicast,
+    ospfv3_adjacency_lsdb,
+)
+from routeforge.runtime.mpls import (
+    evpn_vxlan_control,
+    l3vpn_vrf_route_targets,
+    mpls_ldp_lfib,
 )
 
 

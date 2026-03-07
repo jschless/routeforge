@@ -15,7 +15,49 @@
 
 ## Concept walkthrough
 
-Deterministic best-path selection over core attributes/tie-breakers. Student-mode coding target for this stage is `src/routeforge/runtime/bgp.py` (`select_best_path`).
+### What problem does BGP best-path solve?
+
+A BGP router often receives multiple paths to the same prefix from different peers.  The *best-path selection algorithm* picks exactly one path to install in the RIB and use for forwarding.  The algorithm must be *deterministic* — given the same inputs, always produce the same winner — so the network converges to a stable state.
+
+### Topology
+
+```
+AS 65001          AS 65002
+  R1 ─────────────  R2
+  |    eBGP peer    |
+  |                 |
+  R3               R4
+    \             /
+     AS 65003 (R5, the prefix originator)
+```
+
+R1 receives two paths to `10.0.0.0/8` — one via R2 (local_pref=100, AS path 65002 65003) and one via R3 (local_pref=200, shorter AS path).  Best-path selection chooses the winner.
+
+### Decision chain (this lab's scope)
+
+Apply these criteria in order — the first one that distinguishes the candidates wins:
+
+| Priority | Criterion | Higher/Lower wins |
+|---|---|---|
+| 1 | `local_pref` | Higher wins |
+| 2 | `len(as_path)` | Shorter (lower) wins |
+| 3 | `origin` (igp/egp/incomplete) | Lower rank wins (igp=0, egp=1, incomplete=2) |
+| 4 | `med` | Lower wins |
+| 5 | `next_hop` (string) | Lexicographically lower wins |
+
+### Worked example
+
+Three paths to `10.0.0.0/8`:
+```
+Path A: local_pref=100, as_path=(65002, 65003), origin=igp, med=0, next_hop="10.1.1.2"
+Path B: local_pref=200, as_path=(65003,),       origin=igp, med=0, next_hop="10.1.1.3"
+Path C: local_pref=200, as_path=(65003, 65004), origin=igp, med=0, next_hop="10.1.1.1"
+```
+
+Step 1: local_pref — B and C (200) beat A (100).  A is eliminated.
+Step 2: as_path length — B (len=1) beats C (len=2).  **Winner: B.**
+
+Student-mode coding target for this stage is `src/routeforge/runtime/bgp.py` (`select_best_path`).
 
 ## Implementation TODO map
 
@@ -64,8 +106,11 @@ routeforge debug explain --trace /tmp/lab22_bgp_attributes_and_bestpath.jsonl --
 
 Checkpoint guide:
 
-- `BGP_UPDATE_RX`: Deterministic best-path selection over core attributes/tie-breakers.
-- `BGP_BEST_PATH`: Deterministic best-path selection over core attributes/tie-breakers.
+- `BGP_UPDATE_RX`: A batch of BGP path updates was received and queued for best-path
+  evaluation.  If missing, the update ingestion step before `select_best_path` was not reached.
+- `BGP_BEST_PATH`: `select_best_path` ran and produced a winner.  If missing, the function
+  raised an exception.  If the wrong path is selected, check your tiebreak order — a common
+  mistake is applying MED before AS path length, or using `>` instead of `<` for MED.
 
 ## Failure drills and troubleshooting flow
 

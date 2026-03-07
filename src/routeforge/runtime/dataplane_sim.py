@@ -86,7 +86,9 @@ class DataplaneSim:
         # TODO(student): implement deterministic egress VLAN admission and tag rewrite plan.
         raise NotImplementedError("TODO: implement DataplaneSim._determine_egress_vlan_plan")
 
-    def process_frame(self, *, ingress_interface: str, frame: EthernetFrame) -> FrameOutcome:
+    def process_frame(
+        self, *, ingress_interface: str, frame: EthernetFrame
+    ) -> FrameOutcome:
         iface = self.router.get_interface(ingress_interface)
         if iface is None:
             return FrameOutcome(
@@ -123,7 +125,9 @@ class DataplaneSim:
 
         source_mac = frame.normalized().src_mac
         destination_mac = frame.normalized().dst_mac
-        self.router.learn_mac(vlan=ingress_vlan, mac=source_mac, interface_name=ingress_interface)
+        self.router.learn_mac(
+            vlan=ingress_vlan, mac=source_mac, interface_name=ingress_interface
+        )
 
         checkpoints: list[str] = ["PARSE_OK", "VLAN_CLASSIFY", "MAC_LEARN"]
 

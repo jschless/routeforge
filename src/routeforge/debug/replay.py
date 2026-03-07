@@ -62,7 +62,7 @@ def explain_lines(records: list[dict[str, Any]], *, step: str | None = None) -> 
     egress = record.get("egress", [])
     egress_ports = ", ".join(str(item.get("interface")) for item in egress) if egress else "none"
     checkpoints = ", ".join(record.get("checkpoints", [])) or "none"
-    return [
+    lines = [
         f"step: {step}",
         f"action: {record.get('action', '?')}",
         f"reason: {record.get('reason', '?')}",
@@ -70,3 +70,9 @@ def explain_lines(records: list[dict[str, Any]], *, step: str | None = None) -> 
         f"egress_ports: {egress_ports}",
         f"checkpoints: {checkpoints}",
     ]
+    # Emit protocol-specific detail fields (OSPF state, BGP attributes, L3
+    # decisions, etc.) so students see context without writing a custom parser.
+    if details := record.get("details"):
+        for key, value in sorted(details.items()):
+            lines.append(f"  {key}: {value}")
+    return lines
