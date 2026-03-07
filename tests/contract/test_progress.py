@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+from routeforge.labs.progress import (
+    ProgressState,
+    apply_run_result,
+    clear_progress,
+    load_progress,
+    mark_completed,
+    save_progress,
+    unlocked_labs,
+)
+
+
+def test_load_missing_progress_returns_empty(tmp_path) -> None:
+    state = load_progress(tmp_path / "missing.json")
+    assert state.version == 1
+    assert state.completed == ()
+    assert state.run_counts == {}
+
+
+def test_save_and_load_roundtrip(tmp_path) -> None:
+    path = tmp_path / "progress.json"
+    original = ProgressState(
+        version=1,
+        completed=("lab01_frame_and_headers",),
+        run_counts={"lab01_frame_and_headers": 2},
+        pass_counts={"lab01_frame_and_headers": 1},
+        last_result={"lab01_frame_and_headers": "PASS"},
+    )
+    save_progress(original, path)
+    loaded = load_progress(path)
+    assert loaded == original
+
+
+def test_apply_run_result_and_unlock_flow() -> None:
+    state = clear_progress()
+    state = apply_run_result(state, lab_id="lab01_frame_and_headers", passed=True)
+    state = apply_run_result(state, lab_id="lab02_mac_learning_switch", passed=False)
+    state = mark_completed(state, "lab02_mac_learning_switch")
+
+    assert state.completed[:2] == ("lab01_frame_and_headers", "lab02_mac_learning_switch")
+    assert state.run_counts["lab01_frame_and_headers"] == 1
+    assert state.run_counts["lab02_mac_learning_switch"] == 1
+    assert state.pass_counts["lab01_frame_and_headers"] == 1
+    assert state.last_result["lab02_mac_learning_switch"] == "FAIL"
+    assert unlocked_labs(state)[0] == "lab03_vlan_and_trunks"

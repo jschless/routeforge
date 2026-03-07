@@ -1,0 +1,411 @@
+version: 1
+profile: ccnp_v1
+as_of: "2026-03-07"
+
+levels:
+  - MUST
+  - SHOULD
+  - OUT
+
+scope:
+  addressing: IPv4
+  ipv6: OUT
+  ospf: OSPFv2
+  bgp: BGP-4 IPv4 unicast
+
+features:
+  - id: L2_FRAME_VALIDATION
+    domain: L2
+    level: MUST
+    description: Ethernet/IPv4 frame and header validation behavior.
+    labs: [lab01_frame_and_headers]
+    tests: [test_conformance_l2_frame_validation]
+    checkpoints: [PARSE_OK, PARSE_DROP]
+
+  - id: L2_MAC_LEARN_FWD
+    domain: L2
+    level: MUST
+    description: MAC learning, unknown unicast flood, deterministic unicast forwarding.
+    labs: [lab02_mac_learning_switch]
+    tests: [test_conformance_l2_mac_learning]
+    checkpoints: [MAC_LEARN, L2_FLOOD, L2_UNICAST_FORWARD]
+
+  - id: L2_VLAN_TRUNK
+    domain: L2
+    level: MUST
+    description: VLAN tagging/untagging and per-VLAN forwarding behavior.
+    labs: [lab03_vlan_and_trunks]
+    tests: [test_conformance_l2_vlan_trunk]
+    checkpoints: [VLAN_CLASSIFY, VLAN_TAG_PUSH, VLAN_TAG_POP]
+
+  - id: L2_STP_CORE
+    domain: L2
+    level: MUST
+    description: STP deterministic root and port role/state behavior.
+    labs: [lab04_stp]
+    tests: [test_conformance_stp_core]
+    checkpoints: [STP_ROOT_CHANGE, STP_PORT_ROLE_CHANGE]
+
+  - id: L2_STP_PROTECTION
+    domain: L2
+    level: MUST
+    description: Topology change handling and protection semantics.
+    labs: [lab05_stp_convergence_and_protection]
+    tests: [test_conformance_stp_protection]
+    checkpoints: [STP_TOPOLOGY_CHANGE, STP_GUARD_ACTION]
+
+  - id: L3_ARP_ADJ
+    domain: L3
+    level: MUST
+    description: ARP resolution, cache updates, and pending queue behavior.
+    labs: [lab06_arp_and_adjacency]
+    tests: [test_conformance_l3_arp_adjacency]
+    checkpoints: [ARP_REQUEST_TX, ARP_REPLY_RX, ARP_CACHE_UPDATE]
+
+  - id: L3_RIB_LPM
+    domain: L3
+    level: MUST
+    description: Connected/static route install and deterministic LPM selection.
+    labs: [lab07_ipv4_subnet_and_rib]
+    tests: [test_conformance_l3_rib_lpm]
+    checkpoints: [RIB_ROUTE_INSTALL, ROUTE_LOOKUP, ROUTE_SELECT]
+
+  - id: L3_FIB_FORWARD
+    domain: L3
+    level: MUST
+    description: FIB forwarding pipeline with TTL decrement and drop reasons.
+    labs: [lab08_fib_forwarding_pipeline]
+    tests: [test_conformance_l3_fib_forward]
+    checkpoints: [FIB_FORWARD, FIB_DROP, TTL_DECREMENT]
+
+  - id: L3_ICMP_CONTROL
+    domain: L3
+    level: MUST
+    description: ICMP echo, unreachable, and time-exceeded behavior.
+    labs: [lab09_icmp_and_control_responses]
+    tests: [test_conformance_l3_icmp_control]
+    checkpoints: [ICMP_ECHO_REPLY, ICMP_UNREACHABLE, ICMP_TIME_EXCEEDED]
+
+  - id: L3_DIAGNOSTICS
+    domain: L3
+    level: MUST
+    description: Deterministic troubleshooting and explainability checkpoints.
+    labs: [lab10_ipv4_control_plane_diagnostics]
+    tests: [test_conformance_l3_diagnostics]
+    checkpoints: [EXPLAIN_CHECKPOINT, DROP_REASON_ASSERT]
+
+  - id: OSPF_NEIGHBOR_FSM
+    domain: OSPF
+    level: MUST
+    description: OSPF neighbor state machine and timer behavior.
+    labs: [lab11_ospf_adjacency_fsm]
+    tests: [test_conformance_ospf_neighbor_fsm]
+    checkpoints: [OSPF_HELLO_RX, OSPF_NEIGHBOR_CHANGE]
+
+  - id: OSPF_NETTYPE_DRBDR
+    domain: OSPF
+    level: MUST
+    description: OSPF network type behavior and DR/BDR election/failover.
+    labs: [lab12_ospf_network_types_and_dr_bdr]
+    tests: [test_conformance_ospf_dr_bdr]
+    checkpoints: [OSPF_DR_ELECT, OSPF_BDR_ELECT, OSPF_DR_FAILOVER]
+
+  - id: OSPF_LSDB_FLOOD_AGE
+    domain: OSPF
+    level: MUST
+    description: LSA flooding, sequence handling, and aging in LSDB.
+    labs: [lab13_ospf_lsa_flooding_and_lsdb]
+    tests: [test_conformance_ospf_lsdb_flood_age]
+    checkpoints: [OSPF_LSA_INSTALL, OSPF_LSA_REFRESH, OSPF_LSA_AGE_OUT]
+
+  - id: OSPF_SPF_ROUTE_INSTALL
+    domain: OSPF
+    level: MUST
+    description: Deterministic SPF, ECMP policy, and route installation.
+    labs: [lab14_ospf_spf_and_route_install]
+    tests: [test_conformance_ospf_spf_route_install]
+    checkpoints: [OSPF_SPF_RUN, RIB_ROUTE_INSTALL]
+
+  - id: OSPF_MULTI_AREA_ABR
+    domain: OSPF
+    level: MUST
+    description: Multi-area behavior with ABR summary propagation.
+    labs: [lab15_ospf_multi_area_abr]
+    tests: [test_conformance_ospf_multi_area_abr]
+    checkpoints: [OSPF_SUMMARY_ORIGINATE, OSPF_INTERAREA_ROUTE_INSTALL]
+
+  - id: L4_TCP_UDP_FOUNDATIONS
+    domain: L4
+    level: MUST
+    description: TCP/UDP parsing and TCP state behavior for flow-level reasoning.
+    labs: [lab16_udp_tcp_fundamentals]
+    tests: [test_conformance_l4_tcp_udp_foundations]
+    checkpoints: [FLOW_CLASSIFY, TCP_STATE_CHANGE, UDP_VALIDATE]
+
+  - id: BFD_SESSION_TIMERS
+    domain: BFD
+    level: MUST
+    description: BFD session state and timeout behavior feeding control reactions.
+    labs: [lab17_bfd_for_liveness]
+    tests: [test_conformance_bfd_session_timers]
+    checkpoints: [BFD_CONTROL_RX, BFD_STATE_CHANGE, BFD_TIMEOUT]
+
+  - id: POLICY_ACL_ORDER
+    domain: POLICY
+    level: MUST
+    description: ACL first-match ordered evaluation and implicit deny.
+    labs: [lab18_acl_pipeline]
+    tests: [test_conformance_policy_acl_order]
+    checkpoints: [ACL_EVALUATE, ACL_PERMIT, ACL_DENY]
+
+  - id: SERVICE_NAT44_STATE
+    domain: SERVICE
+    level: MUST
+    description: Stateful NAT44 creation, reuse, return matching, and expiration.
+    labs: [lab19_nat44_stateful_translation]
+    tests: [test_conformance_service_nat44_state]
+    checkpoints: [NAT_SESSION_CREATE, NAT_TRANSLATE_OUTBOUND, NAT_TRANSLATE_INBOUND, NAT_SESSION_EXPIRE]
+
+  - id: SERVICE_QOS_MARK_QUEUE
+    domain: SERVICE
+    level: MUST
+    description: Marking, queue admission, and deterministic dequeue behavior.
+    labs: [lab20_qos_marking_and_queueing]
+    tests: [test_conformance_service_qos_mark_queue]
+    checkpoints: [QOS_REMARK, QOS_ENQUEUE, QOS_DEQUEUE]
+
+  - id: BGP_SESSION_FSM
+    domain: BGP
+    level: MUST
+    description: BGP session lifecycle and timer-driven reset behavior.
+    labs: [lab21_bgp_session_fsm_and_transport]
+    tests: [test_conformance_bgp_session_fsm]
+    checkpoints: [BGP_SESSION_CHANGE, BGP_OPEN_RX]
+
+  - id: BGP_BESTPATH
+    domain: BGP
+    level: MUST
+    description: Deterministic best-path selection over core attributes/tie-breakers.
+    labs: [lab22_bgp_attributes_and_bestpath]
+    tests: [test_conformance_bgp_bestpath]
+    checkpoints: [BGP_UPDATE_RX, BGP_BEST_PATH]
+
+  - id: BGP_POLICY_FILTERS
+    domain: BGP
+    level: MUST
+    description: Import/export controls with prefix, AS-path, and community policy.
+    labs: [lab23_bgp_policy_and_filters]
+    tests: [test_conformance_bgp_policy_filters]
+    checkpoints: [BGP_POLICY_APPLY, BGP_UPDATE_EXPORT]
+
+  - id: BGP_ROUTE_REFLECTION
+    domain: BGP
+    level: MUST
+    description: Route-reflector behavior and deterministic convergence semantics.
+    labs: [lab24_bgp_scaling_patterns]
+    tests: [test_conformance_bgp_route_reflection]
+    checkpoints: [BGP_RR_REFLECT, BGP_CONVERGENCE_MARK]
+
+  - id: SERVICE_TUNNEL_IPSEC
+    domain: SERVICE
+    level: MUST
+    description: Tunnel encapsulation/decapsulation and policy-driven IPsec outcomes.
+    labs: [lab25_tunnels_and_ipsec]
+    tests: [test_conformance_service_tunnel_ipsec]
+    checkpoints: [ENCAP_PUSH, ENCAP_POP, IPSEC_POLICY_EVALUATE, IPSEC_SA_LOOKUP]
+
+  - id: OPS_OBSERVABILITY
+    domain: MGMT
+    level: MUST
+    description: Operational telemetry/readiness checks with deterministic outputs.
+    labs: [lab26_observability_and_ops]
+    tests: [test_conformance_ops_observability]
+    checkpoints: [OPS_READINESS_CHECK, TELEMETRY_EMIT]
+
+  - id: CAPSTONE_INCIDENT_RECOVERY
+    domain: CAPSTONE
+    level: MUST
+    description: Scenario-driven multi-protocol failure/recovery and convergence assertions.
+    labs: [lab27_capstone_incident_drill]
+    tests: [test_conformance_capstone_incident_recovery]
+    checkpoints: [SCENARIO_STEP_APPLY, CONVERGENCE_ASSERT]
+
+  - id: OSPF_AUTH_BASIC
+    domain: OSPF
+    level: SHOULD
+    description: Deterministic OSPF authentication outcome modeling.
+    labs: [lab15_ospf_multi_area_abr]
+    tests: [test_conformance_ospf_auth_basic]
+    checkpoints: [OSPF_AUTH_ACCEPT, OSPF_AUTH_REJECT]
+
+  - id: BGP_MULTIPATH
+    domain: BGP
+    level: SHOULD
+    description: Multipath route install where policy and tie-breaks allow.
+    labs: [lab24_bgp_scaling_patterns]
+    tests: [test_conformance_bgp_multipath]
+    checkpoints: [BGP_MULTIPATH_SELECT]
+
+  - id: IPV6_STACK
+    domain: GLOBAL
+    level: OUT
+    description: IPv6 stack and IPv6 routing/control-plane behavior.
+    labs: []
+    tests: []
+    checkpoints: []
+
+  - id: MPLS_VRF_CORE
+    domain: GLOBAL
+    level: OUT
+    description: MPLS and VRF feature set.
+    labs: []
+    tests: []
+    checkpoints: []
+
+  - id: BGP_EVPN
+    domain: GLOBAL
+    level: OUT
+    description: EVPN and multi-AFI overlay control-plane behavior.
+    labs: []
+    tests: []
+    checkpoints: []
+
+lab_coverage:
+  lab01_frame_and_headers:
+    must: [L2_FRAME_VALIDATION]
+    should: []
+    out: [IPV6_STACK]
+  lab02_mac_learning_switch:
+    must: [L2_MAC_LEARN_FWD]
+    should: []
+    out: [IPV6_STACK]
+  lab03_vlan_and_trunks:
+    must: [L2_VLAN_TRUNK]
+    should: []
+    out: [IPV6_STACK]
+  lab04_stp:
+    must: [L2_STP_CORE]
+    should: []
+    out: [IPV6_STACK]
+  lab05_stp_convergence_and_protection:
+    must: [L2_STP_PROTECTION]
+    should: []
+    out: [IPV6_STACK]
+  lab06_arp_and_adjacency:
+    must: [L3_ARP_ADJ]
+    should: []
+    out: [IPV6_STACK]
+  lab07_ipv4_subnet_and_rib:
+    must: [L3_RIB_LPM]
+    should: []
+    out: [IPV6_STACK]
+  lab08_fib_forwarding_pipeline:
+    must: [L3_FIB_FORWARD]
+    should: []
+    out: [IPV6_STACK]
+  lab09_icmp_and_control_responses:
+    must: [L3_ICMP_CONTROL]
+    should: []
+    out: [IPV6_STACK]
+  lab10_ipv4_control_plane_diagnostics:
+    must: [L3_DIAGNOSTICS]
+    should: []
+    out: [IPV6_STACK]
+  lab11_ospf_adjacency_fsm:
+    must: [OSPF_NEIGHBOR_FSM]
+    should: []
+    out: [IPV6_STACK]
+  lab12_ospf_network_types_and_dr_bdr:
+    must: [OSPF_NETTYPE_DRBDR]
+    should: []
+    out: [IPV6_STACK]
+  lab13_ospf_lsa_flooding_and_lsdb:
+    must: [OSPF_LSDB_FLOOD_AGE]
+    should: []
+    out: [IPV6_STACK]
+  lab14_ospf_spf_and_route_install:
+    must: [OSPF_SPF_ROUTE_INSTALL]
+    should: []
+    out: [IPV6_STACK]
+  lab15_ospf_multi_area_abr:
+    must: [OSPF_MULTI_AREA_ABR]
+    should: [OSPF_AUTH_BASIC]
+    out: [IPV6_STACK]
+  lab16_udp_tcp_fundamentals:
+    must: [L4_TCP_UDP_FOUNDATIONS]
+    should: []
+    out: [IPV6_STACK]
+  lab17_bfd_for_liveness:
+    must: [BFD_SESSION_TIMERS]
+    should: []
+    out: [IPV6_STACK]
+  lab18_acl_pipeline:
+    must: [POLICY_ACL_ORDER]
+    should: []
+    out: [IPV6_STACK]
+  lab19_nat44_stateful_translation:
+    must: [SERVICE_NAT44_STATE]
+    should: []
+    out: [IPV6_STACK]
+  lab20_qos_marking_and_queueing:
+    must: [SERVICE_QOS_MARK_QUEUE]
+    should: []
+    out: [IPV6_STACK]
+  lab21_bgp_session_fsm_and_transport:
+    must: [BGP_SESSION_FSM]
+    should: []
+    out: [IPV6_STACK]
+  lab22_bgp_attributes_and_bestpath:
+    must: [BGP_BESTPATH]
+    should: []
+    out: [IPV6_STACK]
+  lab23_bgp_policy_and_filters:
+    must: [BGP_POLICY_FILTERS]
+    should: []
+    out: [IPV6_STACK]
+  lab24_bgp_scaling_patterns:
+    must: [BGP_ROUTE_REFLECTION]
+    should: [BGP_MULTIPATH]
+    out: [IPV6_STACK]
+  lab25_tunnels_and_ipsec:
+    must: [SERVICE_TUNNEL_IPSEC]
+    should: []
+    out: [IPV6_STACK]
+  lab26_observability_and_ops:
+    must: [OPS_OBSERVABILITY]
+    should: []
+    out: [IPV6_STACK]
+  lab27_capstone_incident_drill:
+    must: [CAPSTONE_INCIDENT_RECOVERY]
+    should: [OSPF_AUTH_BASIC, BGP_MULTIPATH]
+    out: [IPV6_STACK, MPLS_VRF_CORE, BGP_EVPN]
+
+release_gate:
+  v1_must_pass:
+    - L2_FRAME_VALIDATION
+    - L2_MAC_LEARN_FWD
+    - L2_VLAN_TRUNK
+    - L2_STP_CORE
+    - L2_STP_PROTECTION
+    - L3_ARP_ADJ
+    - L3_RIB_LPM
+    - L3_FIB_FORWARD
+    - L3_ICMP_CONTROL
+    - L3_DIAGNOSTICS
+    - OSPF_NEIGHBOR_FSM
+    - OSPF_NETTYPE_DRBDR
+    - OSPF_LSDB_FLOOD_AGE
+    - OSPF_SPF_ROUTE_INSTALL
+    - OSPF_MULTI_AREA_ABR
+    - L4_TCP_UDP_FOUNDATIONS
+    - BFD_SESSION_TIMERS
+    - POLICY_ACL_ORDER
+    - SERVICE_NAT44_STATE
+    - SERVICE_QOS_MARK_QUEUE
+    - BGP_SESSION_FSM
+    - BGP_BESTPATH
+    - BGP_POLICY_FILTERS
+    - BGP_ROUTE_REFLECTION
+    - SERVICE_TUNNEL_IPSEC
+    - OPS_OBSERVABILITY
+    - CAPSTONE_INCIDENT_RECOVERY

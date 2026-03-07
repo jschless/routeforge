@@ -1,0 +1,94 @@
+version: 1
+profile: ccnp_v1
+as_of: "2026-03-07"
+
+bands:
+  - name: PASS
+    min_score: 70.0
+  - name: MERIT
+    min_score: 85.0
+  - name: DISTINCTION
+    min_score: 95.0
+
+labs:
+  lab01_frame_and_headers:
+    weight: 3
+    category: foundation_l2_l3
+  lab02_mac_learning_switch:
+    weight: 3
+    category: foundation_l2_l3
+  lab03_vlan_and_trunks:
+    weight: 3
+    category: foundation_l2_l3
+  lab04_stp:
+    weight: 3
+    category: foundation_l2_l3
+  lab05_stp_convergence_and_protection:
+    weight: 3
+    category: foundation_l2_l3
+  lab06_arp_and_adjacency:
+    weight: 3
+    category: foundation_l2_l3
+  lab07_ipv4_subnet_and_rib:
+    weight: 3
+    category: foundation_l2_l3
+  lab08_fib_forwarding_pipeline:
+    weight: 3
+    category: foundation_l2_l3
+  lab09_icmp_and_control_responses:
+    weight: 3
+    category: foundation_l2_l3
+  lab10_ipv4_control_plane_diagnostics:
+    weight: 3
+    category: foundation_l2_l3
+  lab11_ospf_adjacency_fsm:
+    weight: 3
+    category: ospf_services
+  lab12_ospf_network_types_and_dr_bdr:
+    weight: 3
+    category: ospf_services
+  lab13_ospf_lsa_flooding_and_lsdb:
+    weight: 3
+    category: ospf_services
+  lab14_ospf_spf_and_route_install:
+    weight: 3
+    category: ospf_services
+  lab15_ospf_multi_area_abr:
+    weight: 3
+    category: ospf_services
+  lab16_udp_tcp_fundamentals:
+    weight: 3
+    category: ospf_services
+  lab17_bfd_for_liveness:
+    weight: 3
+    category: ospf_services
+  lab18_acl_pipeline:
+    weight: 3
+    category: ospf_services
+  lab19_nat44_stateful_translation:
+    weight: 3
+    category: ospf_services
+  lab20_qos_marking_and_queueing:
+    weight: 3
+    category: ospf_services
+  lab21_bgp_session_fsm_and_transport:
+    weight: 7
+    category: bgp_track
+  lab22_bgp_attributes_and_bestpath:
+    weight: 7
+    category: bgp_track
+  lab23_bgp_policy_and_filters:
+    weight: 7
+    category: bgp_track
+  lab24_bgp_scaling_patterns:
+    weight: 7
+    category: bgp_track
+  lab25_tunnels_and_ipsec:
+    weight: 4
+    category: integration_capstone
+  lab26_observability_and_ops:
+    weight: 4
+    category: integration_capstone
+  lab27_capstone_incident_drill:
+    weight: 4
+    category: integration_capstone
