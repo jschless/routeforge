@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/phase2.py`.
+- Implement `derive_slaac_host_id, ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/phase2.py`.
 - Deliver `ipv6_nd_learn`: neighbor discovery entry is learned on trusted RA.
 - Deliver `ipv6_slaac_apply`: SLAAC derives deterministic global address.
 - Deliver `ipv6_ra_guard_drop`: untrusted RA is blocked by RA guard.
@@ -16,22 +16,29 @@
 
 ## Concept walkthrough
 
-IPv6 host onboarding flow with RA trust boundaries. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`ipv6_nd_slaac_ra_guard`).
+IPv6 host onboarding flow with RA trust boundaries. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`derive_slaac_host_id, ipv6_nd_slaac_ra_guard`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/phase2.py`
-- Symbol: `ipv6_nd_slaac_ra_guard`
-- Why this target: implement the core behavior required by the three lab steps.
+- Symbols: `derive_slaac_host_id, ipv6_nd_slaac_ra_guard`
+- Why this target: derive deterministic host identifier and enforce RA trust policy.
 - Stage check: `routeforge check lab34`
+
+Function contract for this stage:
+
+- Symbol: `derive_slaac_host_id(*, source_link_local: str) -> str`
+- Required behavior: extract stable host-id from link-local input (defaulting to `1` when missing)
+- Symbol: `ipv6_nd_slaac_ra_guard(*, ra_trusted: bool, source_link_local: str, prefix: str) -> tuple[Literal["ALLOW", "DROP"], str]`
+- Required behavior: block untrusted RA; otherwise return SLAAC address as `prefix + host-id`
 
 Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab34_ipv6_nd_slaac_and_ra_guard`
-3. Edit only `ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `derive_slaac_host_id, ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/phase2.py`.
 4. Run `routeforge check lab34` until it exits with status `0`.
 5. Run `routeforge run lab34_ipv6_nd_slaac_and_ra_guard --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -72,7 +79,7 @@ Checkpoint guide:
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab34` to confirm tests catch regressions.
+- Intentionally break `derive_slaac_host_id` or `ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab34` to confirm tests catch regressions.
 - If `routeforge run lab34_ipv6_nd_slaac_and_ra_guard --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.

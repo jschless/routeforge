@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `mpbgp_ipv6_unicast` in `src/routeforge/runtime/phase2.py`.
+- Implement `rank_mpbgp_path, mpbgp_ipv6_unicast` in `src/routeforge/runtime/phase2.py`.
 - Deliver `mpbgp_update_rx`: MP-BGP IPv6 updates are ingested.
 - Deliver `mpbgp_afi_select`: IPv6 unicast AFI/SAFI context is selected.
 - Deliver `mpbgp_bestpath`: best path chosen by deterministic policy.
@@ -16,22 +16,29 @@
 
 ## Concept walkthrough
 
-Multiprotocol BGP path handling for IPv6 unicast. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`mpbgp_ipv6_unicast`).
+Multiprotocol BGP path handling for IPv6 unicast. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`rank_mpbgp_path, mpbgp_ipv6_unicast`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/phase2.py`
-- Symbol: `mpbgp_ipv6_unicast`
-- Why this target: implement the core behavior required by the three lab steps.
+- Symbols: `rank_mpbgp_path, mpbgp_ipv6_unicast`
+- Why this target: define deterministic path ranking key, then apply best-path selection.
 - Stage check: `routeforge check lab36`
+
+Function contract for this stage:
+
+- Symbol: `rank_mpbgp_path(path: MpbgpPath) -> tuple[int, int, str]`
+- Required behavior: rank by local-pref desc, AS-path length asc, next-hop asc
+- Symbol: `mpbgp_ipv6_unicast(paths: list[MpbgpPath]) -> MpbgpPath`
+- Required behavior: raise `ValueError` on empty input; return path with best rank otherwise
 
 Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab36_mpbgp_ipv6_unicast`
-3. Edit only `mpbgp_ipv6_unicast` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `rank_mpbgp_path, mpbgp_ipv6_unicast` in `src/routeforge/runtime/phase2.py`.
 4. Run `routeforge check lab36` until it exits with status `0`.
 5. Run `routeforge run lab36_mpbgp_ipv6_unicast --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -72,7 +79,7 @@ Checkpoint guide:
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `mpbgp_ipv6_unicast` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab36` to confirm tests catch regressions.
+- Intentionally break `rank_mpbgp_path` or `mpbgp_ipv6_unicast` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab36` to confirm tests catch regressions.
 - If `routeforge run lab36_mpbgp_ipv6_unicast --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.

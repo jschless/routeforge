@@ -11,6 +11,33 @@ from routeforge.runtime.dataplane_sim import DataplaneSim
 from routeforge.runtime.interface import Interface
 from routeforge.runtime.observability import emit_telemetry, readiness_check
 from routeforge.runtime.ospf import DrCandidate, _election_order, failover_dr_bdr
+from routeforge.runtime.phase2 import (
+    MpbgpPath,
+    apply_policer,
+    build_redistribution_tag,
+    derive_slaac_host_id,
+    dhcp_snooping_dai,
+    evpn_type2_entry,
+    evpn_vxlan_control,
+    fhrp_track_failover,
+    ipv6_nd_slaac_ra_guard,
+    l3vpn_vrf_route_targets,
+    learn_binding_if_trusted,
+    lfib_mapping,
+    mpls_ldp_lfib,
+    mpbgp_ipv6_unicast,
+    ospfv3_adjacency_lsdb,
+    ospfv3_neighbor_result,
+    port_security_ip_source_guard,
+    qos_police_shape,
+    qos_wred_decision,
+    rank_mpbgp_path,
+    redistribute_with_loop_guard,
+    tracked_object_result,
+    update_secure_mac_table,
+    vrf_import_action,
+    wred_decision_profile,
+)
 from routeforge.runtime.router import Router
 from routeforge.runtime.stp import (
     Bridge,
@@ -223,6 +250,138 @@ def test_stage26_readiness_and_telemetry() -> None:
     )
     assert telemetry["component"] == "edge-1"
     assert list(telemetry["counters"].keys()) == ["drops", "forwarded"]
+
+
+@pytest.mark.stage(28)
+def test_stage28_dhcp_binding_and_dai() -> None:
+    learned = learn_binding_if_trusted(
+        trusted_port=True,
+        binding=None,
+        arp_mac="00:aa:00:00:00:01",
+        arp_ip="10.10.10.10",
+    )
+    assert learned is not None
+    assert learned.vlan == 10
+
+    _, action = dhcp_snooping_dai(
+        trusted_port=False,
+        binding=learned,
+        arp_mac="00:aa:00:00:00:01",
+        arp_ip="10.10.10.10",
+    )
+    assert action == "ALLOW"
+
+
+@pytest.mark.stage(29)
+def test_stage29_port_security_and_ipsg() -> None:
+    learned, violated = update_secure_mac_table(
+        max_macs=1,
+        learned_macs=(),
+        source_mac="00:11:22:33:44:55",
+    )
+    assert violated is False
+    assert learned == ("00:11:22:33:44:55",)
+
+    _, action = port_security_ip_source_guard(
+        max_macs=1,
+        learned_macs=learned,
+        source_mac="00:11:22:33:44:66",
+        source_ip_allowed=True,
+    )
+    assert action == "PORTSEC_VIOLATION"
+
+
+@pytest.mark.stage(30)
+def test_stage30_policing_and_shaping() -> None:
+    assert apply_policer(offered_kbps=2000, cir_kbps=1500) == 1500
+    admitted, released = qos_police_shape(offered_kbps=2000, cir_kbps=1500, shape_rate_kbps=1200)
+    assert admitted == 1500
+    assert released == 1200
+
+
+@pytest.mark.stage(31)
+def test_stage31_wred_profile_and_decision() -> None:
+    assert wred_decision_profile(queue_depth=60, min_threshold=50, max_threshold=100) == "BETWEEN_THRESHOLDS"
+    assert qos_wred_decision(queue_depth=60, min_threshold=50, max_threshold=100, ecn_capable=True) == "MARK"
+    assert qos_wred_decision(queue_depth=120, min_threshold=50, max_threshold=100, ecn_capable=True) == "DROP"
+
+
+@pytest.mark.stage(32)
+def test_stage32_redistribution_loop_guard() -> None:
+    tag = build_redistribution_tag(source_prefix="10.40.0.0/16", source_protocol="ospf")
+    assert tag == "OSPF:10.40.0.0/16"
+
+    tags, action = redistribute_with_loop_guard(
+        source_prefix="10.40.0.0/16",
+        source_protocol="OSPF",
+        existing_tags=set(),
+    )
+    assert action == "IMPORT"
+    assert tag in tags
+
+
+@pytest.mark.stage(33)
+def test_stage33_fhrp_track_state() -> None:
+    assert tracked_object_result(tracked_object_up=True) == "UP"
+    assert tracked_object_result(tracked_object_up=False) == "DOWN"
+    assert fhrp_track_failover(active_router="R1", standby_router="R2", tracked_object_up=False) == "R2"
+
+
+@pytest.mark.stage(34)
+def test_stage34_ipv6_ra_guard_and_slaac() -> None:
+    assert derive_slaac_host_id(source_link_local="fe80::10") == "10"
+    action, address = ipv6_nd_slaac_ra_guard(
+        ra_trusted=True,
+        source_link_local="fe80::10",
+        prefix="2001:db8:100::",
+    )
+    assert action == "ALLOW"
+    assert address == "2001:db8:100::10"
+
+
+@pytest.mark.stage(35)
+def test_stage35_ospfv3_state_and_lsdb() -> None:
+    assert ospfv3_neighbor_result(hello_ok=False) == "DOWN"
+    state, lsdb = ospfv3_adjacency_lsdb(hello_ok=True, lsa_id="lsa-1", lsdb=set())
+    assert state == "FULL"
+    assert lsdb == {"lsa-1"}
+
+
+@pytest.mark.stage(36)
+def test_stage36_mpbgp_rank_and_select() -> None:
+    path = MpbgpPath(prefix="2001:db8:1::/64", local_pref=150, as_path_len=3, next_hop="2001:db8::2")
+    assert rank_mpbgp_path(path) == (-150, 3, "2001:db8::2")
+    best = mpbgp_ipv6_unicast(
+        [
+            path,
+            MpbgpPath(prefix="2001:db8:1::/64", local_pref=200, as_path_len=5, next_hop="2001:db8::4"),
+        ]
+    )
+    assert best.next_hop == "2001:db8::4"
+
+
+@pytest.mark.stage(37)
+def test_stage37_lfib_mapping() -> None:
+    assert lfib_mapping(fec="10.70.0.0/16", local_label=16001, outgoing_label=24001) == ("10.70.0.0/16", 16001, 24001)
+    assert mpls_ldp_lfib(fec="10.70.0.0/16", local_label=16001, outgoing_label=24001) == ("10.70.0.0/16", 16001, 24001)
+
+
+@pytest.mark.stage(38)
+def test_stage38_vrf_import_action() -> None:
+    assert vrf_import_action(import_rts={"65000:100"}, route_rt="65000:100") == "IMPORT"
+    assert l3vpn_vrf_route_targets(import_rts={"65000:100"}, route_rt="65000:200", prefix="172.16.10.0/24") == (
+        "REJECT",
+        "172.16.10.0/24",
+    )
+
+
+@pytest.mark.stage(39)
+def test_stage39_evpn_entry_and_control() -> None:
+    assert evpn_type2_entry(mac="00:50:56:aa:bb:cc", ip="10.39.0.10", vni=5000) == "00:50:56:aa:bb:cc|10.39.0.10|5000"
+    assert evpn_vxlan_control(mac="00:50:56:aa:bb:cc", ip="10.39.0.10", vni=5000, known_vnis={5000}) == (
+        "INSTALL",
+        "00:50:56:aa:bb:cc|10.39.0.10|5000",
+    )
 
 
 @pytest.mark.parametrize(

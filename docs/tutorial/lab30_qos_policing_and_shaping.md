@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `qos_police_shape` in `src/routeforge/runtime/phase2.py`.
+- Implement `apply_policer, qos_police_shape` in `src/routeforge/runtime/phase2.py`.
 - Deliver `qos_police_rate`: traffic above CIR is policed.
 - Deliver `qos_shape_queue`: excess traffic is queued by shaper.
 - Deliver `qos_shape_release`: queued traffic is released at shape rate.
@@ -16,22 +16,29 @@
 
 ## Concept walkthrough
 
-Rate enforcement pipeline with police and shape stages. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`qos_police_shape`).
+Rate enforcement pipeline with police and shape stages. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`apply_policer, qos_police_shape`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/phase2.py`
-- Symbol: `qos_police_shape`
-- Why this target: implement the core behavior required by the three lab steps.
+- Symbols: `apply_policer, qos_police_shape`
+- Why this target: implement CIR policing logic and deterministic shaping release behavior.
 - Stage check: `routeforge check lab30`
+
+Function contract for this stage:
+
+- Symbol: `apply_policer(*, offered_kbps: int, cir_kbps: int) -> int`
+- Required behavior: return admitted rate at or below CIR with zero-floor normalization
+- Symbol: `qos_police_shape(*, offered_kbps: int, cir_kbps: int, shape_rate_kbps: int) -> tuple[int, int]`
+- Required behavior: return `(admitted, released)` where released is shape-limited from admitted
 
 Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab30_qos_policing_and_shaping`
-3. Edit only `qos_police_shape` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `apply_policer, qos_police_shape` in `src/routeforge/runtime/phase2.py`.
 4. Run `routeforge check lab30` until it exits with status `0`.
 5. Run `routeforge run lab30_qos_policing_and_shaping --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -72,7 +79,7 @@ Checkpoint guide:
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `qos_police_shape` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab30` to confirm tests catch regressions.
+- Intentionally break `apply_policer` or `qos_police_shape` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab30` to confirm tests catch regressions.
 - If `routeforge run lab30_qos_policing_and_shaping --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.

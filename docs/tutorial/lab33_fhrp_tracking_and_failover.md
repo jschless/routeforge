@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `fhrp_track_failover` in `src/routeforge/runtime/phase2.py`.
+- Implement `tracked_object_result, fhrp_track_failover` in `src/routeforge/runtime/phase2.py`.
 - Deliver `fhrp_active_initial`: primary router is initially active.
 - Deliver `fhrp_track_failover`: tracked failure triggers failover.
 - Deliver `fhrp_preempt_recover`: primary preempts after recovery.
@@ -16,22 +16,29 @@
 
 ## Concept walkthrough
 
-First-hop redundancy behavior under tracked object failures. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`fhrp_track_failover`).
+First-hop redundancy behavior under tracked object failures. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`tracked_object_result, fhrp_track_failover`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/phase2.py`
-- Symbol: `fhrp_track_failover`
-- Why this target: implement the core behavior required by the three lab steps.
+- Symbols: `tracked_object_result, fhrp_track_failover`
+- Why this target: derive explicit track state first, then select deterministic active/standby role.
 - Stage check: `routeforge check lab33`
+
+Function contract for this stage:
+
+- Symbol: `tracked_object_result(*, tracked_object_up: bool) -> Literal["UP", "DOWN"]`
+- Required behavior: convert tracked-object boolean into explicit UP/DOWN state
+- Symbol: `fhrp_track_failover(*, active_router: str, standby_router: str, tracked_object_up: bool) -> str`
+- Required behavior: keep active on UP, fail over to standby on DOWN
 
 Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab33_fhrp_tracking_and_failover`
-3. Edit only `fhrp_track_failover` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `tracked_object_result, fhrp_track_failover` in `src/routeforge/runtime/phase2.py`.
 4. Run `routeforge check lab33` until it exits with status `0`.
 5. Run `routeforge run lab33_fhrp_tracking_and_failover --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -72,7 +79,7 @@ Checkpoint guide:
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `fhrp_track_failover` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab33` to confirm tests catch regressions.
+- Intentionally break `tracked_object_result` or `fhrp_track_failover` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab33` to confirm tests catch regressions.
 - If `routeforge run lab33_fhrp_tracking_and_failover --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.
