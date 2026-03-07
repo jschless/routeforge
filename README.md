@@ -49,6 +49,11 @@ Progress and readiness reporting are available via CLI:
 - `routeforge report [--json-out ...]`
 - `routeforge report --rubric-file labs/assessment_rubric.yaml` for weighted scoring bands
 
+Student coding mode is available for `lab01`:
+
+- edit `src/routeforge/student/lab01.py`
+- run `routeforge run lab01_frame_and_headers --student`
+
 ## Quickstart
 
 ```bash

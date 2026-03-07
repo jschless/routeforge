@@ -77,6 +77,27 @@ A lab is complete when all of the following are true:
 
 If any step shows `[FAIL]`, the lab is not complete yet.
 
+## Student Coding Mode (Write Code Yourself)
+
+If you want hands-on coding tasks (not just run/interpret), use student mode:
+
+```bash
+routeforge run lab01_frame_and_headers --student --state-file /tmp/routeforge-progress.json
+```
+
+Student mode for Lab 1 expects you to edit:
+
+- `src/routeforge/student/lab01.py`
+
+Implement these functions:
+
+- `validate_mac`
+- `validate_ipv4`
+- `validate_ttl`
+- `frame_should_parse`
+
+Then re-run the same command until all student steps show `[PASS]`.
+
 ## How To Read Lab Output
 
 Example:
@@ -167,6 +188,7 @@ routeforge debug explain --trace /tmp/lab-trace.jsonl --step <step_name>
 - `routeforge labs`: ordered curriculum list
 - `routeforge show <lab_id>`: lab metadata + conformance mapping
 - `routeforge run <lab_id>`: execute lab with prerequisite checks
+- `routeforge run <lab_id> --student`: run student coding checks (available labs only)
 - `routeforge run <lab_id> --trace-out <file>`: write JSONL trace records
 - `routeforge debug replay --trace <file>`: replay timeline
 - `routeforge debug explain --trace <file> --step <step_name>`: inspect one step

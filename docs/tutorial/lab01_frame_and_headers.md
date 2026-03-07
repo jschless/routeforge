@@ -20,6 +20,12 @@
 - `src/routeforge/model/packet.py`: validation rules for MAC/IP/TTL.
 - `src/routeforge/runtime/dataplane_sim.py`: parse gate and drop reasons.
 
+Student coding task:
+
+- Implement `src/routeforge/student/lab01.py`.
+- Run `routeforge run lab01_frame_and_headers --student`.
+- Iterate until all student validation steps pass.
+
 ## Verification commands and expected outputs
 
 ```bash

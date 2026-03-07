@@ -116,6 +116,19 @@ def test_run_lab27_allows_when_prereqs_met() -> None:
     assert main(argv) == 0
 
 
+def test_run_student_mode_unavailable_for_lab02(capsys) -> None:
+    assert main(["run", "lab02_mac_learning_switch", "--student", "--completed", "lab01_frame_and_headers"]) == 3
+    output = capsys.readouterr().out
+    assert "student coding checks not available yet" in output
+
+
+def test_run_student_mode_lab01_surfaces_not_implemented(capsys) -> None:
+    assert main(["run", "lab01_frame_and_headers", "--student"]) == 4
+    output = capsys.readouterr().out.lower()
+    assert "not implemented: validate_mac" in output
+    assert "edit src/routeforge/student/lab01.py" in output
+
+
 def test_run_command_writes_trace(tmp_path) -> None:
     trace = tmp_path / "trace.jsonl"
     code = main(

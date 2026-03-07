@@ -9,7 +9,7 @@ from pathlib import Path
 from routeforge.debug.replay import explain_lines, load_trace, replay_lines
 from routeforge.labs.assessment import evaluate_assessment, load_assessment_rubric
 from routeforge.labs.conformance import load_conformance_matrix
-from routeforge.labs.exercises import LAB_RUNNERS, run_lab
+from routeforge.labs.exercises import LAB_RUNNERS, STUDENT_LAB_RUNNERS, run_lab, run_student_lab
 from routeforge.labs.manifest import LABS, get_lab, missing_prereqs
 from routeforge.labs.progress import (
     DEFAULT_PROGRESS_PATH,
@@ -42,6 +42,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--trace-out", type=Path, default=None, help="Write JSONL trace output for the lab run")
     run.add_argument("--state-file", type=Path, default=None, help="Optional progress state file to update")
+    run.add_argument(
+        "--student",
+        action="store_true",
+        help="Run student coding checks (available labs only; currently lab01).",
+    )
 
     progress = sub.add_parser("progress", help="Show and manage learner progress")
     progress_sub = progress.add_subparsers(dest="progress_command", required=True)
@@ -119,7 +124,13 @@ def _resolve_state_file(path: Path | None) -> Path:
     return path or DEFAULT_PROGRESS_PATH
 
 
-def _cmd_run(lab_id: str, completed_values: list[str], trace_out: Path | None, state_file: Path | None) -> int:
+def _cmd_run(
+    lab_id: str,
+    completed_values: list[str],
+    trace_out: Path | None,
+    state_file: Path | None,
+    student_mode: bool,
+) -> int:
     entry = get_lab(lab_id)
     if entry is None:
         print(f"unknown lab: {lab_id}")
@@ -144,13 +155,18 @@ def _cmd_run(lab_id: str, completed_values: list[str], trace_out: Path | None, s
         print(f"blocked: {lab_id} has unmet prerequisites: {unmet_text}")
         return 2
 
-    if lab_id not in LAB_RUNNERS:
-        implemented = ", ".join(sorted(LAB_RUNNERS))
+    available_runners = STUDENT_LAB_RUNNERS if student_mode else LAB_RUNNERS
+    if lab_id not in available_runners:
+        implemented = ", ".join(sorted(available_runners))
+        if student_mode:
+            print(f"student coding checks not available yet: {lab_id}")
+            print(f"currently available student labs: {implemented if implemented else 'none'}")
+            return 3
         print(f"lab implementation not available yet: {lab_id}")
         print(f"currently implemented: {implemented}")
         return 3
 
-    result = run_lab(lab_id)
+    result = run_student_lab(lab_id) if student_mode else run_lab(lab_id)
     if trace_out is not None:
         trace_out.parent.mkdir(parents=True, exist_ok=True)
         with trace_out.open("w", encoding="utf-8") as handle:
@@ -344,7 +360,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "show":
         return _cmd_show(args.lab_id)
     if args.command == "run":
-        return _cmd_run(args.lab_id, args.completed, args.trace_out, args.state_file)
+        return _cmd_run(args.lab_id, args.completed, args.trace_out, args.state_file, args.student)
     if args.command == "progress":
         if args.progress_command == "show":
             return _cmd_progress_show(args.state_file)
