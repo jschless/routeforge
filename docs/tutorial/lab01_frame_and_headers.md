@@ -26,6 +26,18 @@ Primary target for this stage:
 - Why this target: Validate Ethernet and IPv4 header fields.
 - Stage check: `routeforge check lab01`
 
+Required error-code strings for this lab (exact match):
+
+- `L2_INVALID_SRC_MAC`
+- `L2_INVALID_DST_MAC`
+- `L2_UNSUPPORTED_ETHERTYPE`
+- `L2_INVALID_VLAN`
+- `L3_INVALID_SRC_IP`
+- `L3_INVALID_DST_IP`
+- `L3_INVALID_TTL`
+
+These are also declared in `src/routeforge/model/packet.py` for direct in-code reference.
+
 Suggested student walkthrough:
 
 1. `git switch student`
@@ -81,4 +93,3 @@ Checkpoint guide:
 
 - IEEE 802.1D (bridging and STP fundamentals).
 - IEEE 802.1Q (VLAN tagging and trunk behavior).
-

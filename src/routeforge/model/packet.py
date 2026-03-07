@@ -10,6 +10,15 @@ MAC_RE = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
 ETHERTYPE_IPV4 = 0x0800
 BROADCAST_MAC = "ff:ff:ff:ff:ff:ff"
 
+# Lab 01 validation codes. Keep these as exact string contracts.
+L2_INVALID_SRC_MAC = "L2_INVALID_SRC_MAC"
+L2_INVALID_DST_MAC = "L2_INVALID_DST_MAC"
+L2_UNSUPPORTED_ETHERTYPE = "L2_UNSUPPORTED_ETHERTYPE"
+L2_INVALID_VLAN = "L2_INVALID_VLAN"
+L3_INVALID_SRC_IP = "L3_INVALID_SRC_IP"
+L3_INVALID_DST_IP = "L3_INVALID_DST_IP"
+L3_INVALID_TTL = "L3_INVALID_TTL"
+
 
 def normalize_mac(value: str) -> str:
     return value.strip().lower()
@@ -26,17 +35,18 @@ class IPv4Header:
     ttl: int = 64
 
     def validate(self) -> list[str]:
+        """Return zero or more L3 error codes from the module-level Lab 01 contract."""
         errors: list[str] = []
         try:
             IPv4Address(self.src_ip)
         except ValueError:
-            errors.append("L3_INVALID_SRC_IP")
+            errors.append(L3_INVALID_SRC_IP)
         try:
             IPv4Address(self.dst_ip)
         except ValueError:
-            errors.append("L3_INVALID_DST_IP")
+            errors.append(L3_INVALID_DST_IP)
         if self.ttl < 1:
-            errors.append("L3_INVALID_TTL")
+            errors.append(L3_INVALID_TTL)
         return errors
 
 
@@ -58,19 +68,20 @@ class EthernetFrame:
         )
 
     def validate(self) -> list[str]:
+        """Return zero or more L2/L3 error codes from the module-level Lab 01 contract."""
         frame = self.normalized()
         errors: list[str] = []
 
         if not is_valid_mac(frame.src_mac):
-            errors.append("L2_INVALID_SRC_MAC")
+            errors.append(L2_INVALID_SRC_MAC)
         if not is_valid_mac(frame.dst_mac):
-            errors.append("L2_INVALID_DST_MAC")
+            errors.append(L2_INVALID_DST_MAC)
 
         if frame.ethertype != ETHERTYPE_IPV4:
-            errors.append("L2_UNSUPPORTED_ETHERTYPE")
+            errors.append(L2_UNSUPPORTED_ETHERTYPE)
 
         if frame.vlan_id is not None and frame.vlan_id < 1:
-            errors.append("L2_INVALID_VLAN")
+            errors.append(L2_INVALID_VLAN)
 
         errors.extend(frame.payload.validate())
         return errors
