@@ -1,0 +1,46 @@
+site_name: RouteForge Textbook
+site_description: CCNP-depth pedagogical networking workbook
+site_url: https://jschless.github.io/routeforge/
+repo_url: https://github.com/jschless/routeforge
+repo_name: jschless/routeforge
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - Architecture:
+      - Redesign: routeforge_redesign.md
+      - Bridge Contract: bridge_contract.md
+      - Execution Plan: execution_plan.md
+  - Tutorial:
+      - Lab 01: tutorial/lab01_frame_and_headers.md
+      - Lab 02: tutorial/lab02_mac_learning_switch.md
+      - Lab 03: tutorial/lab03_vlan_and_trunks.md
+      - Lab 04: tutorial/lab04_stp.md
+      - Lab 05: tutorial/lab05_stp_convergence_and_protection.md
+      - Lab 06: tutorial/lab06_arp_and_adjacency.md
+      - Lab 07: tutorial/lab07_ipv4_subnet_and_rib.md
+      - Lab 08: tutorial/lab08_fib_forwarding_pipeline.md
+      - Lab 09: tutorial/lab09_icmp_and_control_responses.md
+      - Lab 10: tutorial/lab10_ipv4_control_plane_diagnostics.md
+      - Lab 11: tutorial/lab11_ospf_adjacency_fsm.md
+      - Lab 12: tutorial/lab12_ospf_network_types_and_dr_bdr.md
+      - Lab 13: tutorial/lab13_ospf_lsa_flooding_and_lsdb.md
+      - Lab 14: tutorial/lab14_ospf_spf_and_route_install.md
+      - Lab 15: tutorial/lab15_ospf_multi_area_abr.md
+      - Lab 16: tutorial/lab16_udp_tcp_fundamentals.md
+      - Lab 17: tutorial/lab17_bfd_for_liveness.md
+      - Lab 18: tutorial/lab18_acl_pipeline.md
+      - Lab 19: tutorial/lab19_nat44_stateful_translation.md
+      - Lab 20: tutorial/lab20_qos_marking_and_queueing.md
+      - Lab 21: tutorial/lab21_bgp_session_fsm_and_transport.md
+      - Lab 22: tutorial/lab22_bgp_attributes_and_bestpath.md
+      - Lab 23: tutorial/lab23_bgp_policy_and_filters.md
+      - Lab 24: tutorial/lab24_bgp_scaling_patterns.md
+      - Lab 25: tutorial/lab25_tunnels_and_ipsec.md
+      - Lab 26: tutorial/lab26_observability_and_ops.md
+      - Lab 27: tutorial/lab27_capstone_incident_drill.md

@@ -93,6 +93,7 @@ routeforge debug explain --trace /tmp/lab01-trace.jsonl --step invalid_frame_dro
 - `docs/bridge_contract.md`
 - `labs/conformance_matrix.yaml`
 - `labs/assessment_rubric.yaml`
+- `docs/index.md` (MkDocs textbook home)
 - `docs/tutorial/lab01_frame_and_headers.md`
 - `docs/tutorial/lab02_mac_learning_switch.md`
 - `docs/tutorial/lab03_vlan_and_trunks.md`
@@ -120,3 +121,10 @@ routeforge debug explain --trace /tmp/lab01-trace.jsonl --step invalid_frame_dro
 - `docs/tutorial/lab25_tunnels_and_ipsec.md`
 - `docs/tutorial/lab26_observability_and_ops.md`
 - `docs/tutorial/lab27_capstone_incident_drill.md`
+
+## GitHub Pages
+
+- Workflow: `.github/workflows/pages.yml`
+- Site config: `mkdocs.yml`
+- Textbook home: `docs/index.md`
+- GitHub setting required: `Settings -> Pages -> Source = GitHub Actions`
