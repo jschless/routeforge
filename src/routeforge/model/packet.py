@@ -16,7 +16,8 @@ def normalize_mac(value: str) -> str:
 
 
 def is_valid_mac(value: str) -> bool:
-    return bool(MAC_RE.match(normalize_mac(value)))
+    # TODO(student): return True only for valid colon-delimited MAC addresses.
+    raise NotImplementedError("TODO: implement is_valid_mac")
 
 
 @dataclass(frozen=True)
@@ -26,18 +27,8 @@ class IPv4Header:
     ttl: int = 64
 
     def validate(self) -> list[str]:
-        errors: list[str] = []
-        try:
-            IPv4Address(self.src_ip)
-        except ValueError:
-            errors.append("L3_INVALID_SRC_IP")
-        try:
-            IPv4Address(self.dst_ip)
-        except ValueError:
-            errors.append("L3_INVALID_DST_IP")
-        if self.ttl < 1:
-            errors.append("L3_INVALID_TTL")
-        return errors
+        # TODO(student): validate src_ip, dst_ip, and ttl. Return error codes.
+        raise NotImplementedError("TODO: implement IPv4Header.validate")
 
 
 @dataclass(frozen=True)
@@ -58,19 +49,5 @@ class EthernetFrame:
         )
 
     def validate(self) -> list[str]:
-        frame = self.normalized()
-        errors: list[str] = []
-
-        if not is_valid_mac(frame.src_mac):
-            errors.append("L2_INVALID_SRC_MAC")
-        if not is_valid_mac(frame.dst_mac):
-            errors.append("L2_INVALID_DST_MAC")
-
-        if frame.ethertype != ETHERTYPE_IPV4:
-            errors.append("L2_UNSUPPORTED_ETHERTYPE")
-
-        if frame.vlan_id is not None and frame.vlan_id < 1:
-            errors.append("L2_INVALID_VLAN")
-
-        errors.extend(frame.payload.validate())
-        return errors
+        # TODO(student): validate L2 MACs/ethertype/VLAN and extend with payload errors.
+        raise NotImplementedError("TODO: implement EthernetFrame.validate")
