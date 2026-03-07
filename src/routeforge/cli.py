@@ -14,6 +14,7 @@ from routeforge.labs.assessment import evaluate_assessment, load_assessment_rubr
 from routeforge.labs.conformance import load_conformance_matrix
 from routeforge.labs.exercises import LAB_RUNNERS, run_lab
 from routeforge.labs.manifest import LABS, get_lab, missing_prereqs
+from routeforge.labs.student_targets import student_target_for_lab
 from routeforge.labs.progress import (
     DEFAULT_PROGRESS_PATH,
     ProgressState,
@@ -106,6 +107,15 @@ def _cmd_show(lab_id: str) -> int:
             print(f"conformance.must: {must}")
             print(f"conformance.should: {should}")
             print(f"conformance.out: {out}")
+        student_target = student_target_for_lab(lab_id)
+        if student_target is None:
+            print("student.target: none")
+        else:
+            symbols = ", ".join(student_target.symbols)
+            print(f"student.stage: {student_target.stage}")
+            print(f"student.target: {student_target.path}")
+            print(f"student.symbols: {symbols}")
+            print(f"student.summary: {student_target.summary}")
         return 0
     print(f"unknown lab: {lab_id}")
     return 1

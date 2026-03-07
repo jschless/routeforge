@@ -1,0 +1,194 @@
+version: 1
+as_of: "2026-03-07"
+
+targets:
+  - lab_id: lab01_frame_and_headers
+    stage: 1
+    path: src/routeforge/model/packet.py
+    symbols:
+      - is_valid_mac
+      - IPv4Header.validate
+      - EthernetFrame.validate
+    summary: Validate Ethernet and IPv4 header fields.
+
+  - lab_id: lab02_mac_learning_switch
+    stage: 2
+    path: src/routeforge/runtime/dataplane_sim.py
+    symbols:
+      - DataplaneSim._select_known_unicast_egress
+    summary: Select deterministic egress for known unicast frames.
+
+  - lab_id: lab03_vlan_and_trunks
+    stage: 3
+    path: src/routeforge/runtime/dataplane_sim.py
+    symbols:
+      - DataplaneSim._vlan_translation_checkpoint
+    summary: Emit VLAN tag push/pop checkpoints on trunk/access transitions.
+
+  - lab_id: lab04_stp
+    stage: 4
+    path: src/routeforge/runtime/stp.py
+    symbols:
+      - compute_stp
+    summary: Compute deterministic STP root and port roles.
+
+  - lab_id: lab05_stp_convergence_and_protection
+    stage: 5
+    path: src/routeforge/runtime/stp.py
+    symbols:
+      - bpdu_guard_decision
+    summary: Apply BPDU guard behavior on edge ports.
+
+  - lab_id: lab06_arp_and_adjacency
+    stage: 6
+    path: src/routeforge/runtime/adjacency.py
+    symbols:
+      - ArpAdjacencyTable.resolve
+    summary: Resolve ARP entries and release queued packets.
+
+  - lab_id: lab07_ipv4_subnet_and_rib
+    stage: 7
+    path: src/routeforge/runtime/l3.py
+    symbols:
+      - RibTable.lookup
+    summary: Perform deterministic LPM route lookup.
+
+  - lab_id: lab08_fib_forwarding_pipeline
+    stage: 8
+    path: src/routeforge/runtime/l3.py
+    symbols:
+      - forward_packet
+    summary: Build forwarding/drop decisions with TTL handling.
+
+  - lab_id: lab09_icmp_and_control_responses
+    stage: 9
+    path: src/routeforge/runtime/l3.py
+    symbols:
+      - icmp_control
+    summary: Generate ICMP control-plane responses for echo, no-route, and TTL expiry.
+
+  - lab_id: lab10_ipv4_control_plane_diagnostics
+    stage: 10
+    path: src/routeforge/runtime/l3.py
+    symbols:
+      - explain_drop
+    summary: Explain deterministic drop reasons for diagnostics.
+
+  - lab_id: lab11_ospf_adjacency_fsm
+    stage: 11
+    path: src/routeforge/runtime/ospf.py
+    symbols:
+      - neighbor_hello_transition
+    summary: Advance OSPF neighbor state machine on hello/dead events.
+
+  - lab_id: lab12_ospf_network_types_and_dr_bdr
+    stage: 12
+    path: src/routeforge/runtime/ospf.py
+    symbols:
+      - failover_dr_bdr
+    summary: Re-elect DR/BDR after node loss.
+
+  - lab_id: lab13_ospf_lsa_flooding_and_lsdb
+    stage: 13
+    path: src/routeforge/runtime/ospf.py
+    symbols:
+      - Lsdb.age_tick
+    summary: Age LSAs and remove max-age entries.
+
+  - lab_id: lab14_ospf_spf_and_route_install
+    stage: 14
+    path: src/routeforge/runtime/ospf.py
+    symbols:
+      - run_spf
+    summary: Compute deterministic SPF costs and parents.
+
+  - lab_id: lab15_ospf_multi_area_abr
+    stage: 15
+    path: src/routeforge/runtime/ospf.py
+    symbols:
+      - originate_summaries
+    summary: Produce inter-area summary routes.
+
+  - lab_id: lab16_udp_tcp_fundamentals
+    stage: 16
+    path: src/routeforge/runtime/transport.py
+    symbols:
+      - validate_udp
+    summary: Validate UDP header length/checksum constraints.
+
+  - lab_id: lab17_bfd_for_liveness
+    stage: 17
+    path: src/routeforge/runtime/bfd.py
+    symbols:
+      - BfdSession.tick
+    summary: Detect BFD timeout behavior deterministically.
+
+  - lab_id: lab18_acl_pipeline
+    stage: 18
+    path: src/routeforge/runtime/policy_acl.py
+    symbols:
+      - evaluate_acl
+    summary: Evaluate ACLs with first-match semantics.
+
+  - lab_id: lab19_nat44_stateful_translation
+    stage: 19
+    path: src/routeforge/runtime/nat44.py
+    symbols:
+      - Nat44Table.inbound_translate
+    summary: Translate return traffic using NAT session state.
+
+  - lab_id: lab20_qos_marking_and_queueing
+    stage: 20
+    path: src/routeforge/runtime/qos.py
+    symbols:
+      - QosEngine.dequeue
+    summary: Dequeue packets using deterministic scheduler order.
+
+  - lab_id: lab21_bgp_session_fsm_and_transport
+    stage: 21
+    path: src/routeforge/runtime/bgp.py
+    symbols:
+      - bgp_session_transition
+    summary: Drive BGP session FSM transitions.
+
+  - lab_id: lab22_bgp_attributes_and_bestpath
+    stage: 22
+    path: src/routeforge/runtime/bgp.py
+    symbols:
+      - select_best_path
+    summary: Select deterministic BGP best path from candidates.
+
+  - lab_id: lab23_bgp_policy_and_filters
+    stage: 23
+    path: src/routeforge/runtime/bgp.py
+    symbols:
+      - apply_export_policy
+    summary: Apply outbound policy filters and attribute rewrites.
+
+  - lab_id: lab24_bgp_scaling_patterns
+    stage: 24
+    path: src/routeforge/runtime/bgp.py
+    symbols:
+      - route_reflect
+    summary: Reflect client routes to non-originating clients.
+
+  - lab_id: lab25_tunnels_and_ipsec
+    stage: 25
+    path: src/routeforge/runtime/tunnel_ipsec.py
+    symbols:
+      - evaluate_ipsec_policy
+    summary: Classify flows as PROTECT or BYPASS by prefix policy.
+
+  - lab_id: lab26_observability_and_ops
+    stage: 26
+    path: src/routeforge/runtime/observability.py
+    symbols:
+      - emit_telemetry
+    summary: Emit deterministic telemetry payloads with stable ordering.
+
+  - lab_id: lab27_capstone_incident_drill
+    stage: 27
+    path: src/routeforge/runtime/capstone.py
+    symbols:
+      - apply_step
+    summary: Apply incident/recovery state transitions deterministically.

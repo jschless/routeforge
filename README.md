@@ -54,6 +54,7 @@ Student experience is branch-based:
 - `main`: reference implementation (all tests pass)
 - `student`: same repo with selected TODO blanks in real source files
 - staged checks: `routeforge check lab01`, `routeforge check lab02`, ... `routeforge check all`
+- student task map: `routeforge show <lab_id>` or `docs/student_task_map.md`
 
 ## Quickstart
 
@@ -77,8 +78,10 @@ routeforge report --state-file "$STATE"
 
 - `docs/routeforge_redesign.md`
 - `docs/getting_started.md`
+- `docs/student_task_map.md`
 - `docs/bridge_contract.md`
 - `labs/conformance_matrix.yaml`
+- `labs/student_targets.yaml`
 - `labs/assessment_rubric.yaml`
 - `docs/index.md` (MkDocs textbook home)
 - `docs/tutorial/lab01_frame_and_headers.md`
