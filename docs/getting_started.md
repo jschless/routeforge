@@ -187,6 +187,18 @@ Do not invent new string values if the lab already defines contract strings.
 - `routeforge debug replay --trace <file>`
 - `routeforge debug explain --trace <file> --step <step_name>`
 
+## TDL Side-Quest Commands
+
+TDL gives additional coding challenges in `src/routeforge/runtime/tdl.py`:
+
+- `routeforge tdl list`
+- `routeforge tdl show <challenge_id>`
+- `routeforge tdl check <challenge_id|all>`
+- `routeforge tdl run <challenge_id> [--state-file ...]`
+- `routeforge tdl progress show|reset [--state-file ...]`
+
+See [TDL Side Quests](tdl.md) for the mission map and challenge IDs.
+
 ## Common Mistakes
 
 - Coding on `main` instead of `student`

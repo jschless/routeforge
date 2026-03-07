@@ -79,6 +79,11 @@ routeforge check lab01
 routeforge check lab02
 routeforge check all
 
+# optional side-quest track
+routeforge tdl list
+routeforge tdl check tdl_auto_01_yang_path_validation
+routeforge tdl run tdl_auto_01_yang_path_validation
+
 # optional runtime/progress workflow
 STATE=/tmp/routeforge-progress.json
 routeforge run lab01_frame_and_headers --state-file "$STATE"
@@ -90,6 +95,7 @@ routeforge report --state-file "$STATE"
 
 - `docs/routeforge_redesign.md`
 - `docs/getting_started.md`
+- `docs/tdl.md`
 - `docs/student_task_map.md`
 - `docs/function_contracts.md`
 - `docs/bridge_contract.md`
