@@ -2,48 +2,83 @@
 
 ## Learning objectives
 
-- Classify flows with deterministic 5-tuple identity.
-- Advance TCP FSM through deterministic state transitions.
-- Validate UDP datagrams with deterministic header checks.
+- Implement `validate_udp` in `src/routeforge/runtime/transport.py`.
+- Deliver `flow_classify`: 5-tuple flow classification is deterministic.
+- Deliver `tcp_state_change`: TCP state machine reaches ESTABLISHED.
+- Deliver `udp_validate`: UDP header validation accepts valid datagram.
+- Validate internal behavior through checkpoints: FLOW_CLASSIFY, TCP_STATE_CHANGE, UDP_VALIDATE.
 
 ## Prerequisite recap
 
-- Complete `lab15_ospf_multi_area_abr`.
-- Understand transport protocol differences between TCP and UDP.
+- Required prior labs: lab15_ospf_multi_area_abr.
+- Confirm target mapping before coding with `routeforge show lab16_udp_tcp_fundamentals`.
+- Work on the `student` branch so you are editing TODO stubs, not solved reference code.
 
 ## Concept walkthrough
 
-`lab16` introduces transport behavior needed for protocol and service logic. Flow identity, TCP state transitions, and UDP validation are modeled in a deterministic way.
+TCP/UDP parsing and TCP state behavior for flow-level reasoning. Student-mode coding target for this stage is `src/routeforge/runtime/transport.py` (`validate_udp`).
 
 ## Implementation TODO map
 
-- `src/routeforge/runtime/transport.py`: flow classification, TCP FSM, UDP validation.
-- `src/routeforge/labs/exercises.py`: transport scenarios and assertions.
+Primary target for this stage:
+
+- File: `src/routeforge/runtime/transport.py`
+- Symbols: `validate_udp`
+- Why this target: Validate UDP header length/checksum constraints.
+- Stage check: `routeforge check lab16`
+
+Suggested student walkthrough:
+
+1. `git switch student`
+2. `routeforge show lab16_udp_tcp_fundamentals`
+3. Edit only the listed symbols in `src/routeforge/runtime/transport.py`.
+4. Run `routeforge check lab16` until it exits with status `0`.
+5. Run `routeforge run lab16_udp_tcp_fundamentals --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
 ## Verification commands and expected outputs
 
 ```bash
-PYTHONPATH=src python -m routeforge run lab16_udp_tcp_fundamentals --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm,lab12_ospf_network_types_and_dr_bdr,lab13_ospf_lsa_flooding_and_lsdb,lab14_ospf_spf_and_route_install,lab15_ospf_multi_area_abr
+routeforge show lab16_udp_tcp_fundamentals
+routeforge check lab16
+
+STATE=/tmp/routeforge-progress.json
+routeforge run lab16_udp_tcp_fundamentals --state-file "$STATE"
 ```
 
-Expected:
+Expected outcomes:
 
-- `flow_classify` step `PASS`.
-- `tcp_state_change` step `PASS`.
-- `udp_validate` step `PASS`.
-- Checkpoints include `FLOW_CLASSIFY`, `TCP_STATE_CHANGE`, `UDP_VALIDATE`.
+- `routeforge show` prints `student.stage`, `student.target`, and `student.symbols` matching this chapter.
+- `routeforge check lab16` passes when your implementation is complete for this stage.
+- `flow_classify` should print `[PASS]` (5-tuple flow classification is deterministic).
+- `tcp_state_change` should print `[PASS]` (TCP state machine reaches ESTABLISHED).
+- `udp_validate` should print `[PASS]` (UDP header validation accepts valid datagram).
+- Run output includes checkpoints: FLOW_CLASSIFY, TCP_STATE_CHANGE, UDP_VALIDATE.
 
 ## Debug trace checkpoints and interpretation guidance
 
-- `FLOW_CLASSIFY`: flow key established.
-- `TCP_STATE_CHANGE`: TCP FSM state transition recorded.
-- `UDP_VALIDATE`: UDP packet validity decision recorded.
+Generate trace artifacts when a step fails:
+
+```bash
+routeforge run lab16_udp_tcp_fundamentals --state-file "$STATE" --trace-out /tmp/lab16_udp_tcp_fundamentals.jsonl
+routeforge debug replay --trace /tmp/lab16_udp_tcp_fundamentals.jsonl
+routeforge debug explain --trace /tmp/lab16_udp_tcp_fundamentals.jsonl --step flow_classify
+```
+
+Checkpoint guide:
+
+- `FLOW_CLASSIFY`: TCP/UDP parsing and TCP state behavior for flow-level reasoning.
+- `TCP_STATE_CHANGE`: TCP/UDP parsing and TCP state behavior for flow-level reasoning.
+- `UDP_VALIDATE`: TCP/UDP parsing and TCP state behavior for flow-level reasoning.
 
 ## Failure drills and troubleshooting flow
 
-- Use invalid UDP length and confirm deterministic validation failure.
-- Skip TCP handshake event and verify state does not reach `ESTABLISHED`.
+- Intentionally break one listed symbol in `src/routeforge/runtime/transport.py` and rerun `routeforge check lab16` to confirm tests catch regressions.
+- If `routeforge run lab16_udp_tcp_fundamentals --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
+- Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
+- Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.
 
 ## Standards and references
 
-- RFC 793 (TCP) and RFC 768 (UDP) concepts.
+- RFC 768 (UDP).
+- RFC 9293 (TCP core behavior, obsoletes RFC 793).
+

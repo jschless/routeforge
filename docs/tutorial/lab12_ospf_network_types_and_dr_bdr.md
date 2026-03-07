@@ -2,47 +2,80 @@
 
 ## Learning objectives
 
-- Elect DR/BDR deterministically from candidate priority/router-ID.
-- Handle DR failover with deterministic promotion rules.
-- Verify election/failover checkpoints.
+- Implement `failover_dr_bdr` in `src/routeforge/runtime/ospf.py`.
+- Deliver `ospf_dr_bdr_election`: DR/BDR selection follows deterministic priority and router-id ordering.
+- Deliver `ospf_dr_failover`: BDR is promoted to DR when original DR fails.
+- Validate internal behavior through checkpoints: OSPF_DR_ELECT, OSPF_BDR_ELECT, OSPF_DR_FAILOVER.
 
 ## Prerequisite recap
 
-- Complete `lab11_ospf_adjacency_fsm`.
-- Understand OSPF broadcast-network election roles.
+- Required prior labs: lab11_ospf_adjacency_fsm.
+- Confirm target mapping before coding with `routeforge show lab12_ospf_network_types_and_dr_bdr`.
+- Work on the `student` branch so you are editing TODO stubs, not solved reference code.
 
 ## Concept walkthrough
 
-`lab12` models deterministic DR/BDR elections and failover. The best candidate becomes DR, second-best becomes BDR, and BDR is promoted when DR fails.
+OSPF network type behavior and DR/BDR election/failover. Student-mode coding target for this stage is `src/routeforge/runtime/ospf.py` (`failover_dr_bdr`).
 
 ## Implementation TODO map
 
-- `src/routeforge/runtime/ospf.py`: DR/BDR election and failover helpers.
-- `src/routeforge/labs/exercises.py`: election and failover scenarios.
+Primary target for this stage:
+
+- File: `src/routeforge/runtime/ospf.py`
+- Symbols: `failover_dr_bdr`
+- Why this target: Re-elect DR/BDR after node loss.
+- Stage check: `routeforge check lab12`
+
+Suggested student walkthrough:
+
+1. `git switch student`
+2. `routeforge show lab12_ospf_network_types_and_dr_bdr`
+3. Edit only the listed symbols in `src/routeforge/runtime/ospf.py`.
+4. Run `routeforge check lab12` until it exits with status `0`.
+5. Run `routeforge run lab12_ospf_network_types_and_dr_bdr --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
 ## Verification commands and expected outputs
 
 ```bash
-PYTHONPATH=src python -m routeforge run lab12_ospf_network_types_and_dr_bdr --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm
+routeforge show lab12_ospf_network_types_and_dr_bdr
+routeforge check lab12
+
+STATE=/tmp/routeforge-progress.json
+routeforge run lab12_ospf_network_types_and_dr_bdr --state-file "$STATE"
 ```
 
-Expected:
+Expected outcomes:
 
-- `ospf_dr_bdr_election` step `PASS`.
-- `ospf_dr_failover` step `PASS`.
-- Checkpoints include `OSPF_DR_ELECT`, `OSPF_BDR_ELECT`, `OSPF_DR_FAILOVER`.
+- `routeforge show` prints `student.stage`, `student.target`, and `student.symbols` matching this chapter.
+- `routeforge check lab12` passes when your implementation is complete for this stage.
+- `ospf_dr_bdr_election` should print `[PASS]` (DR/BDR selection follows deterministic priority and router-id ordering).
+- `ospf_dr_failover` should print `[PASS]` (BDR is promoted to DR when original DR fails).
+- Run output includes checkpoints: OSPF_DR_ELECT, OSPF_BDR_ELECT, OSPF_DR_FAILOVER.
 
 ## Debug trace checkpoints and interpretation guidance
 
-- `OSPF_DR_ELECT`: DR winner chosen.
-- `OSPF_BDR_ELECT`: BDR winner chosen.
-- `OSPF_DR_FAILOVER`: failover election result.
+Generate trace artifacts when a step fails:
+
+```bash
+routeforge run lab12_ospf_network_types_and_dr_bdr --state-file "$STATE" --trace-out /tmp/lab12_ospf_network_types_and_dr_bdr.jsonl
+routeforge debug replay --trace /tmp/lab12_ospf_network_types_and_dr_bdr.jsonl
+routeforge debug explain --trace /tmp/lab12_ospf_network_types_and_dr_bdr.jsonl --step ospf_dr_bdr_election
+```
+
+Checkpoint guide:
+
+- `OSPF_DR_ELECT`: OSPF network type behavior and DR/BDR election/failover.
+- `OSPF_BDR_ELECT`: OSPF network type behavior and DR/BDR election/failover.
+- `OSPF_DR_FAILOVER`: OSPF network type behavior and DR/BDR election/failover.
 
 ## Failure drills and troubleshooting flow
 
-- Equalize priorities and confirm router-ID tie-break behavior.
-- Remove two candidates and verify single-router election behavior.
+- Intentionally break one listed symbol in `src/routeforge/runtime/ospf.py` and rerun `routeforge check lab12` to confirm tests catch regressions.
+- If `routeforge run lab12_ospf_network_types_and_dr_bdr --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
+- Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
+- Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.
 
 ## Standards and references
 
-- RFC 2328 DR/BDR election concepts.
+- RFC 2328 (OSPFv2).
+

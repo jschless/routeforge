@@ -2,47 +2,80 @@
 
 ## Learning objectives
 
-- Process BFD control packets into session state transitions.
-- Detect liveness failure via deterministic timeout threshold.
-- Verify BFD checkpoints for receive, state change, and timeout.
+- Implement `BfdSession.tick` in `src/routeforge/runtime/bfd.py`.
+- Deliver `bfd_control_rx`: BFD control packet raises session to UP.
+- Deliver `bfd_timeout`: missing control packets trigger deterministic timeout.
+- Validate internal behavior through checkpoints: BFD_CONTROL_RX, BFD_STATE_CHANGE, BFD_TIMEOUT.
 
 ## Prerequisite recap
 
-- Complete `lab16_udp_tcp_fundamentals`.
-- Understand heartbeat-based failure detection concepts.
+- Required prior labs: lab16_udp_tcp_fundamentals.
+- Confirm target mapping before coding with `routeforge show lab17_bfd_for_liveness`.
+- Work on the `student` branch so you are editing TODO stubs, not solved reference code.
 
 ## Concept walkthrough
 
-`lab17` adds fast liveness signaling. Control packets drive the session to `UP`; missed intervals drive deterministic timeout back to `DOWN`.
+BFD session state and timeout behavior feeding control reactions. Student-mode coding target for this stage is `src/routeforge/runtime/bfd.py` (`BfdSession.tick`).
 
 ## Implementation TODO map
 
-- `src/routeforge/runtime/bfd.py`: session receive/tick logic.
-- `src/routeforge/labs/exercises.py`: control-receive and timeout scenarios.
+Primary target for this stage:
+
+- File: `src/routeforge/runtime/bfd.py`
+- Symbols: `BfdSession.tick`
+- Why this target: Detect BFD timeout behavior deterministically.
+- Stage check: `routeforge check lab17`
+
+Suggested student walkthrough:
+
+1. `git switch student`
+2. `routeforge show lab17_bfd_for_liveness`
+3. Edit only the listed symbols in `src/routeforge/runtime/bfd.py`.
+4. Run `routeforge check lab17` until it exits with status `0`.
+5. Run `routeforge run lab17_bfd_for_liveness --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
 ## Verification commands and expected outputs
 
 ```bash
-PYTHONPATH=src python -m routeforge run lab17_bfd_for_liveness --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm,lab12_ospf_network_types_and_dr_bdr,lab13_ospf_lsa_flooding_and_lsdb,lab14_ospf_spf_and_route_install,lab15_ospf_multi_area_abr,lab16_udp_tcp_fundamentals
+routeforge show lab17_bfd_for_liveness
+routeforge check lab17
+
+STATE=/tmp/routeforge-progress.json
+routeforge run lab17_bfd_for_liveness --state-file "$STATE"
 ```
 
-Expected:
+Expected outcomes:
 
-- `bfd_control_rx` step `PASS`.
-- `bfd_timeout` step `PASS`.
-- Checkpoints include `BFD_CONTROL_RX`, `BFD_STATE_CHANGE`, `BFD_TIMEOUT`.
+- `routeforge show` prints `student.stage`, `student.target`, and `student.symbols` matching this chapter.
+- `routeforge check lab17` passes when your implementation is complete for this stage.
+- `bfd_control_rx` should print `[PASS]` (BFD control packet raises session to UP).
+- `bfd_timeout` should print `[PASS]` (missing control packets trigger deterministic timeout).
+- Run output includes checkpoints: BFD_CONTROL_RX, BFD_STATE_CHANGE, BFD_TIMEOUT.
 
 ## Debug trace checkpoints and interpretation guidance
 
-- `BFD_CONTROL_RX`: control packet received.
-- `BFD_STATE_CHANGE`: session state updated.
-- `BFD_TIMEOUT`: detect-mult timeout reached.
+Generate trace artifacts when a step fails:
+
+```bash
+routeforge run lab17_bfd_for_liveness --state-file "$STATE" --trace-out /tmp/lab17_bfd_for_liveness.jsonl
+routeforge debug replay --trace /tmp/lab17_bfd_for_liveness.jsonl
+routeforge debug explain --trace /tmp/lab17_bfd_for_liveness.jsonl --step bfd_control_rx
+```
+
+Checkpoint guide:
+
+- `BFD_CONTROL_RX`: BFD session state and timeout behavior feeding control reactions.
+- `BFD_STATE_CHANGE`: BFD session state and timeout behavior feeding control reactions.
+- `BFD_TIMEOUT`: BFD session state and timeout behavior feeding control reactions.
 
 ## Failure drills and troubleshooting flow
 
-- Lower detect multiplier and observe faster timeout behavior.
-- Keep receiving control packets and verify session stays `UP`.
+- Intentionally break one listed symbol in `src/routeforge/runtime/bfd.py` and rerun `routeforge check lab17` to confirm tests catch regressions.
+- If `routeforge run lab17_bfd_for_liveness --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
+- Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
+- Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.
 
 ## Standards and references
 
-- RFC 5880 BFD session behavior concepts.
+- RFC 5880 (BFD base specification).
+

@@ -1,37 +1,32 @@
 # RouteForge Getting Started
 
-This guide explains what RouteForge is, what it is trying to teach, and how to use it end-to-end as a learner.
+This guide is the practical entry point for students.
+
+If you only read one file before coding, read this one.
 
 ## What RouteForge Is
 
-RouteForge is a deterministic networking workbook designed to build CCNP-level routing and switching intuition.
+RouteForge is a deterministic networking lab workbook.
 
-It combines:
+You learn by implementing specific functions in real source files, then proving behavior with staged tests.
 
-- lab exercises (`lab01` through `lab27`)
-- checkpoint traces for explainability
-- prerequisite gating so foundational concepts are learned in order
-- progress and readiness reporting for structured study
+Core components:
 
-## Learning Goals
+- 27 ordered labs (`lab01` to `lab27`)
+- deterministic checkpoints for debug visibility
+- prerequisite gating between labs
+- progress/readiness reporting
 
-By the end of the full track, a student should be able to:
+## The Two Branches (Important)
 
-- explain L2/L3 forwarding decisions and failure behavior
-- reason through OSPF and BGP control-plane state changes
-- troubleshoot ACL/NAT/QoS and service interactions
-- validate incident recovery in a multi-protocol capstone
+- `main`: solved reference implementation
+- `student`: same project, but with TODO stubs for student coding
 
-## How The Product Works
+If you are trying to learn by coding, use `student`.
 
-RouteForge uses two simulation layers:
+If you stay on `main`, most tests already pass and you will not get meaningful practice.
 
-- `dataplane_sim`: packet handling and forwarding outcomes
-- `controlplane_sim`: protocol FSM and route-state behavior
-
-All labs emit deterministic checkpoints so runs are reproducible and debuggable.
-
-## Installation
+## Install
 
 ```bash
 python -m venv .venv
@@ -39,129 +34,103 @@ source .venv/bin/activate
 pip install -e '.[dev]'
 ```
 
-## First 10 Minutes
-
-1. List labs:
+## 15-Minute Student Quickstart
 
 ```bash
+git switch student
 routeforge labs
-```
-
-2. Run the first lab:
-
-```bash
-routeforge run lab01_frame_and_headers
-```
-
-3. Save progress state:
-
-```bash
-routeforge run lab01_frame_and_headers --state-file /tmp/routeforge-progress.json
-routeforge progress show --state-file /tmp/routeforge-progress.json
-```
-
-4. Run the next unlocked lab using the same state file:
-
-```bash
-routeforge run lab02_mac_learning_switch --state-file /tmp/routeforge-progress.json
-```
-
-## What "Complete A Lab" Means
-
-A lab is complete when all of the following are true:
-
-1. `routeforge run <lab_id>` exits with code `0`.
-2. Every printed step line is `[PASS]`.
-3. The run prints checkpoints for that lab.
-4. If you used `--state-file`, that lab appears in `labs.completed.list`.
-
-If any step shows `[FAIL]`, the lab is not complete yet.
-
-## Branch-Based Student Workflow
-
-RouteForge is intended to be used with two branches:
-
-- `main`: reference implementation (all solutions)
-- `student`: same codebase, but selected lab files contain TODO blanks
-
-Student loop:
-
-1. `git switch student`
-2. edit the real source file for the current lab (for Lab 1: `src/routeforge/model/packet.py`)
-3. confirm the exact file/function target:
-
-```bash
 routeforge show lab01_frame_and_headers
-```
-
-4. run staged tests:
-
-```bash
 routeforge check lab01
 ```
 
-5. when green, move to the next stage:
+What this means:
+
+1. `git switch student` puts you on the coding branch.
+2. `routeforge show ...` tells you exactly what file/functions to implement.
+3. `routeforge check lab01` runs staged tests up to Lab 1.
+
+When `routeforge check lab01` is green, move to:
 
 ```bash
 routeforge check lab02
 ```
 
-By the end of the course:
+At the end of the track:
 
 ```bash
 routeforge check all
 ```
 
-should pass.
+## How To Complete A Lab
 
-Use [student_task_map.md](student_task_map.md) for the full lab-by-lab target list.
+Definition of done for one lab:
 
-## How To Read Lab Output
+1. You implemented the listed target symbols for that lab.
+2. `routeforge check labNN` exits with status `0`.
+3. `routeforge run <lab_id>` shows all `[PASS]` steps.
+4. Expected checkpoints are present in output.
+
+Use this exact loop:
+
+```bash
+# 1) discover target
+routeforge show <lab_id>
+
+# 2) edit target file/symbols on student branch
+
+# 3) verify stage
+routeforge check labNN
+
+# 4) verify runtime behavior
+STATE=/tmp/routeforge-progress.json
+routeforge run <lab_id> --state-file "$STATE"
+```
+
+## `check` vs `run` vs `show`
+
+- `routeforge show <lab_id>`
+  - metadata + prerequisites + conformance + student coding target
+- `routeforge check <labNN|lab_id|all>`
+  - staged pytest gates for student progression
+- `routeforge run <lab_id>`
+  - executes scenario and prints step/checkpoint outcomes
+
+Use `check` for pass/fail progression; use `run` for behavior visibility.
+
+## Checkpoints vs Steps
+
+- Step
+  - human-readable assertion
+  - displayed as `[PASS]` or `[FAIL]`
+- Checkpoint
+  - machine-readable internal event marker
+  - used for conformance and trace debugging
 
 Example:
 
 ```text
-running lab: lab02_mac_learning_switch
-[PASS] unknown_unicast_flood: unknown unicast floods to all non-ingress ports
 [PASS] known_unicast_forward: MAC learning enables deterministic unicast forwarding
-checkpoints: PARSE_OK, VLAN_CLASSIFY, MAC_LEARN, L2_FLOOD, L2_UNICAST_FORWARD
-progress updated: /tmp/routeforge-progress.json
+checkpoints: PARSE_OK, VLAN_CLASSIFY, MAC_LEARN, L2_UNICAST_FORWARD
 ```
 
 Interpretation:
 
-- `running lab`: the selected scenario started.
-- each `[PASS]/[FAIL]` line is a step-level assertion.
-- `checkpoints`: named events hit during the run.
-- `progress updated`: completion state was written to your state file.
+- step passed = expected behavior happened
+- checkpoints show where in the internal pipeline behavior occurred
 
-## What Is A Step vs A Checkpoint?
+## Prerequisites and "blocked" Runs
 
-- Step:
-  - human-readable test/assertion for one behavior in the lab
-  - shown as `[PASS]` or `[FAIL]`
-  - examples: `qos_remark`, `bgp_best_path_select`
-
-- Checkpoint:
-  - machine-readable event marker in the simulation timeline
-  - used for conformance and debugging
-  - examples: `PARSE_DROP`, `BGP_BEST_PATH`, `QOS_DEQUEUE`
-
-Think of steps as "did this requirement pass?" and checkpoints as "what internal events happened?"
-
-## What To Do If You See "blocked"
-
-If output says:
+If you see:
 
 ```text
 blocked: <lab_id> has unmet prerequisites: ...
 ```
 
-that lab is locked until prerequisite labs are complete. Run the missing labs first.
+then you are trying to run out of order.
 
-Tip: `routeforge progress show --state-file <file>` always shows what is unlocked next.
+Fix by completing earlier labs first or by using a state file generated from sequential runs.
 
-## Completion Checklist (Copy/Paste Workflow)
+## Recommended State-File Workflow
 
 ```bash
 STATE=/tmp/routeforge-progress.json
@@ -172,71 +141,48 @@ routeforge progress show --state-file "$STATE"
 
 routeforge run lab02_mac_learning_switch --state-file "$STATE"
 routeforge progress show --state-file "$STATE"
-
-routeforge run lab03_vlan_and_trunks --state-file "$STATE"
-routeforge progress show --state-file "$STATE"
 ```
 
-Repeat this pattern for each newly unlocked lab.
+Repeat in order through the curriculum.
 
-## If A Lab Fails
-
-1. Re-run with trace output:
+## Debug Workflow When Something Fails
 
 ```bash
 routeforge run <lab_id> --state-file "$STATE" --trace-out /tmp/lab-trace.jsonl
-```
-
-2. Replay full timeline:
-
-```bash
 routeforge debug replay --trace /tmp/lab-trace.jsonl
-```
-
-3. Explain one failing step:
-
-```bash
 routeforge debug explain --trace /tmp/lab-trace.jsonl --step <step_name>
 ```
 
-4. Open the matching tutorial chapter and compare expected checkpoints.
+Use this order:
 
-## Core Commands
+1. replay full trace timeline
+2. explain one failing step
+3. compare with tutorial chapter expected checkpoints
 
-- `routeforge labs`: ordered curriculum list
-- `routeforge show <lab_id>`: lab metadata + conformance mapping
-- `routeforge run <lab_id>`: execute lab with prerequisite checks
-- `routeforge check <labNN|lab_id|all>`: run staged student tests up to a milestone
-- `routeforge run <lab_id> --trace-out <file>`: write JSONL trace records
-- `routeforge debug replay --trace <file>`: replay timeline
-- `routeforge debug explain --trace <file> --step <step_name>`: inspect one step
-- `routeforge progress show|mark|reset --state-file <file>`: manage learner state
-- `routeforge report --state-file <file>`: readiness + assessment output
+## Where To Find Targets and Walkthroughs
 
-## Recommended Study Workflow
+- Lab-by-lab coding targets: [student_task_map.md](student_task_map.md)
+- Full chapter walkthroughs: [tutorial](tutorial)
+- Start here: [Lab 01](tutorial/lab01_frame_and_headers.md)
 
-1. Run one lab at a time in order.
-2. If a step fails, use trace replay and explain before moving on.
-3. Keep a persistent state file and check unlocked labs after each run.
-4. Use `routeforge report` weekly to track coverage and at-risk labs.
-5. Revisit tutorial chapters for at-risk labs before retrying.
+## Core Commands Reference
 
-## Textbook Navigation
+- `routeforge labs`
+- `routeforge show <lab_id>`
+- `routeforge check <labNN|lab_id|all>`
+- `routeforge run <lab_id> [--state-file ...] [--trace-out ...]`
+- `routeforge progress show|mark|reset --state-file <file>`
+- `routeforge report --state-file <file>`
+- `routeforge debug replay --trace <file>`
+- `routeforge debug explain --trace <file> --step <step_name>`
 
-- Home: [index.md](index.md)
-- Curriculum chapters: [tutorial](tutorial)
-- Architecture background: [routeforge_redesign.md](routeforge_redesign.md)
+## Common Mistakes
 
-## Conformance and Assessment
+- Coding on `main` instead of `student`
+- Running `routeforge run` and expecting it to replace staged checks
+- Ignoring `routeforge show <lab_id>` and editing unrelated files
+- Treating checkpoints as optional; they are part of conformance
 
-RouteForge ships with:
+## Next Step
 
-- conformance matrix: [`labs/conformance_matrix.yaml`](../labs/conformance_matrix.yaml)
-- assessment rubric: [`labs/assessment_rubric.yaml`](../labs/assessment_rubric.yaml)
-
-These are used by `routeforge report` to produce objective progress and readiness output.
-
-## Next Steps
-
-- Start with [Lab 01](tutorial/lab01_frame_and_headers.md).
-- Follow the ordered path through [Lab 27](tutorial/lab27_capstone_incident_drill.md).
+Open [Lab 01](tutorial/lab01_frame_and_headers.md), implement its target symbols, and make `routeforge check lab01` pass.

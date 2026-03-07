@@ -2,46 +2,79 @@
 
 ## Learning objectives
 
-- Apply scenario steps that model multi-protocol incident response.
-- Validate deterministic failover and recovery states.
-- Assert end-state convergence against baseline expectations.
+- Implement `apply_step` in `src/routeforge/runtime/capstone.py`.
+- Deliver `scenario_step_apply`: incident step applies deterministic failover route and alarm state.
+- Deliver `scenario_convergence_assert`: recovery step clears alarms and returns control plane to baseline.
+- Validate internal behavior through checkpoints: SCENARIO_STEP_APPLY, CONVERGENCE_ASSERT.
 
 ## Prerequisite recap
 
-- Complete `lab26_observability_and_ops`.
-- Recall BFD, OSPF, and BGP interactions from labs `17`, `15`, and `21-24`.
+- Required prior labs: lab26_observability_and_ops.
+- Confirm target mapping before coding with `routeforge show lab27_capstone_incident_drill`.
+- Work on the `student` branch so you are editing TODO stubs, not solved reference code.
 
 ## Concept walkthrough
 
-`lab27` combines control-plane and operations thinking. An incident step introduces failure state, then a recovery step restores baseline reachability and clears alarms.
+Scenario-driven multi-protocol failure/recovery and convergence assertions. Student-mode coding target for this stage is `src/routeforge/runtime/capstone.py` (`apply_step`).
 
 ## Implementation TODO map
 
-- `src/routeforge/runtime/capstone.py`: scenario state and convergence assertion helpers.
-- `src/routeforge/labs/exercises.py`: incident apply/recover scenario.
+Primary target for this stage:
+
+- File: `src/routeforge/runtime/capstone.py`
+- Symbols: `apply_step`
+- Why this target: Apply incident/recovery state transitions deterministically.
+- Stage check: `routeforge check lab27`
+
+Suggested student walkthrough:
+
+1. `git switch student`
+2. `routeforge show lab27_capstone_incident_drill`
+3. Edit only the listed symbols in `src/routeforge/runtime/capstone.py`.
+4. Run `routeforge check lab27` until it exits with status `0`.
+5. Run `routeforge run lab27_capstone_incident_drill --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
 ## Verification commands and expected outputs
 
 ```bash
-PYTHONPATH=src python -m routeforge run lab27_capstone_incident_drill --completed <all-labs-lab01-through-lab26>
+routeforge show lab27_capstone_incident_drill
+routeforge check lab27
+
+STATE=/tmp/routeforge-progress.json
+routeforge run lab27_capstone_incident_drill --state-file "$STATE"
 ```
 
-Expected:
+Expected outcomes:
 
-- `scenario_step_apply` step `PASS`.
-- `scenario_convergence_assert` step `PASS`.
-- Checkpoints include `SCENARIO_STEP_APPLY` and `CONVERGENCE_ASSERT`.
+- `routeforge show` prints `student.stage`, `student.target`, and `student.symbols` matching this chapter.
+- `routeforge check lab27` passes when your implementation is complete for this stage.
+- `scenario_step_apply` should print `[PASS]` (incident step applies deterministic failover route and alarm state).
+- `scenario_convergence_assert` should print `[PASS]` (recovery step clears alarms and returns control plane to baseline).
+- Run output includes checkpoints: SCENARIO_STEP_APPLY, CONVERGENCE_ASSERT.
 
 ## Debug trace checkpoints and interpretation guidance
 
-- `SCENARIO_STEP_APPLY`: fault/failover step applied.
-- `CONVERGENCE_ASSERT`: final routes and alarms match target state.
+Generate trace artifacts when a step fails:
+
+```bash
+routeforge run lab27_capstone_incident_drill --state-file "$STATE" --trace-out /tmp/lab27_capstone_incident_drill.jsonl
+routeforge debug replay --trace /tmp/lab27_capstone_incident_drill.jsonl
+routeforge debug explain --trace /tmp/lab27_capstone_incident_drill.jsonl --step scenario_step_apply
+```
+
+Checkpoint guide:
+
+- `SCENARIO_STEP_APPLY`: Scenario-driven multi-protocol failure/recovery and convergence assertions.
+- `CONVERGENCE_ASSERT`: Scenario-driven multi-protocol failure/recovery and convergence assertions.
 
 ## Failure drills and troubleshooting flow
 
-- Keep alarm uncleared in recovery step and confirm convergence assertion fails.
-- Restore wrong primary route and confirm baseline-stability check fails.
+- Intentionally break one listed symbol in `src/routeforge/runtime/capstone.py` and rerun `routeforge check lab27` to confirm tests catch regressions.
+- If `routeforge run lab27_capstone_incident_drill --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
+- Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
+- Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.
 
 ## Standards and references
 
-- Incident response game-day patterns and deterministic post-incident validation.
+- Incident response runbook patterns and deterministic post-incident verification.
+

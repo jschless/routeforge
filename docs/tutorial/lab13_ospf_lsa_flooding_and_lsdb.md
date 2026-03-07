@@ -2,48 +2,82 @@
 
 ## Learning objectives
 
-- Install LSAs into LSDB with deterministic keying.
-- Refresh LSAs by incrementing sequence and resetting age.
-- Age out LSAs at max age.
+- Implement `Lsdb.age_tick` in `src/routeforge/runtime/ospf.py`.
+- Deliver `ospf_lsa_install`: new LSA is installed into LSDB.
+- Deliver `ospf_lsa_refresh`: LSA refresh increments sequence and resets age.
+- Deliver `ospf_lsa_age_out`: max-age LSAs are removed deterministically.
+- Validate internal behavior through checkpoints: OSPF_LSA_INSTALL, OSPF_LSA_REFRESH, OSPF_LSA_AGE_OUT.
 
 ## Prerequisite recap
 
-- Complete `lab12_ospf_network_types_and_dr_bdr`.
-- Understand LSA lifecycle basics.
+- Required prior labs: lab12_ospf_network_types_and_dr_bdr.
+- Confirm target mapping before coding with `routeforge show lab13_ospf_lsa_flooding_and_lsdb`.
+- Work on the `student` branch so you are editing TODO stubs, not solved reference code.
 
 ## Concept walkthrough
 
-`lab13` focuses on LSDB mutation semantics: initial install, periodic refresh, and deterministic age-out at max age.
+LSA flooding, sequence handling, and aging in LSDB. Student-mode coding target for this stage is `src/routeforge/runtime/ospf.py` (`Lsdb.age_tick`).
 
 ## Implementation TODO map
 
-- `src/routeforge/runtime/ospf.py`: LSDB install/refresh/age helpers.
-- `src/routeforge/labs/exercises.py`: LSDB lifecycle scenario.
+Primary target for this stage:
+
+- File: `src/routeforge/runtime/ospf.py`
+- Symbols: `Lsdb.age_tick`
+- Why this target: Age LSAs and remove max-age entries.
+- Stage check: `routeforge check lab13`
+
+Suggested student walkthrough:
+
+1. `git switch student`
+2. `routeforge show lab13_ospf_lsa_flooding_and_lsdb`
+3. Edit only the listed symbols in `src/routeforge/runtime/ospf.py`.
+4. Run `routeforge check lab13` until it exits with status `0`.
+5. Run `routeforge run lab13_ospf_lsa_flooding_and_lsdb --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
 ## Verification commands and expected outputs
 
 ```bash
-PYTHONPATH=src python -m routeforge run lab13_ospf_lsa_flooding_and_lsdb --completed lab01_frame_and_headers,lab02_mac_learning_switch,lab03_vlan_and_trunks,lab04_stp,lab05_stp_convergence_and_protection,lab06_arp_and_adjacency,lab07_ipv4_subnet_and_rib,lab08_fib_forwarding_pipeline,lab09_icmp_and_control_responses,lab10_ipv4_control_plane_diagnostics,lab11_ospf_adjacency_fsm,lab12_ospf_network_types_and_dr_bdr
+routeforge show lab13_ospf_lsa_flooding_and_lsdb
+routeforge check lab13
+
+STATE=/tmp/routeforge-progress.json
+routeforge run lab13_ospf_lsa_flooding_and_lsdb --state-file "$STATE"
 ```
 
-Expected:
+Expected outcomes:
 
-- `ospf_lsa_install` step `PASS`.
-- `ospf_lsa_refresh` step `PASS`.
-- `ospf_lsa_age_out` step `PASS`.
-- Checkpoints include `OSPF_LSA_INSTALL`, `OSPF_LSA_REFRESH`, `OSPF_LSA_AGE_OUT`.
+- `routeforge show` prints `student.stage`, `student.target`, and `student.symbols` matching this chapter.
+- `routeforge check lab13` passes when your implementation is complete for this stage.
+- `ospf_lsa_install` should print `[PASS]` (new LSA is installed into LSDB).
+- `ospf_lsa_refresh` should print `[PASS]` (LSA refresh increments sequence and resets age).
+- `ospf_lsa_age_out` should print `[PASS]` (max-age LSAs are removed deterministically).
+- Run output includes checkpoints: OSPF_LSA_INSTALL, OSPF_LSA_REFRESH, OSPF_LSA_AGE_OUT.
 
 ## Debug trace checkpoints and interpretation guidance
 
-- `OSPF_LSA_INSTALL`: new LSA accepted into LSDB.
-- `OSPF_LSA_REFRESH`: sequence advanced and age reset.
-- `OSPF_LSA_AGE_OUT`: max-age record removed.
+Generate trace artifacts when a step fails:
+
+```bash
+routeforge run lab13_ospf_lsa_flooding_and_lsdb --state-file "$STATE" --trace-out /tmp/lab13_ospf_lsa_flooding_and_lsdb.jsonl
+routeforge debug replay --trace /tmp/lab13_ospf_lsa_flooding_and_lsdb.jsonl
+routeforge debug explain --trace /tmp/lab13_ospf_lsa_flooding_and_lsdb.jsonl --step ospf_lsa_install
+```
+
+Checkpoint guide:
+
+- `OSPF_LSA_INSTALL`: LSA flooding, sequence handling, and aging in LSDB.
+- `OSPF_LSA_REFRESH`: LSA flooding, sequence handling, and aging in LSDB.
+- `OSPF_LSA_AGE_OUT`: LSA flooding, sequence handling, and aging in LSDB.
 
 ## Failure drills and troubleshooting flow
 
-- Refresh unknown key and confirm deterministic failure behavior.
-- Increase max-age threshold and confirm delayed age-out timing.
+- Intentionally break one listed symbol in `src/routeforge/runtime/ospf.py` and rerun `routeforge check lab13` to confirm tests catch regressions.
+- If `routeforge run lab13_ospf_lsa_flooding_and_lsdb --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
+- Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
+- Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.
 
 ## Standards and references
 
-- RFC 2328 LSDB/LSA aging behavior.
+- RFC 2328 (OSPFv2).
+
