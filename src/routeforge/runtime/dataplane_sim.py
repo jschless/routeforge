@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from routeforge.model.packet import BROADCAST_MAC, EthernetFrame
+from routeforge.model.packet import EthernetFrame
 from routeforge.runtime.router import Router
 
 
