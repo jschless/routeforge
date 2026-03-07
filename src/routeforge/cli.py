@@ -24,6 +24,18 @@ from routeforge.labs.progress import (
     save_progress,
     unlocked_labs,
 )
+from routeforge.tdl.checks import run_tdl_checks
+from routeforge.tdl.exercises import run_tdl_challenge
+from routeforge.tdl.manifest import TDL_CHALLENGES, get_tdl_challenge, tdl_missing_prereqs
+from routeforge.tdl.progress import (
+    DEFAULT_TDL_PROGRESS_PATH,
+    TdlProgressState,
+    apply_tdl_run_result,
+    clear_tdl_progress,
+    load_tdl_progress,
+    save_tdl_progress,
+    unlocked_tdl_challenges,
+)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -61,6 +73,31 @@ def _build_parser() -> argparse.ArgumentParser:
 
     progress_reset = progress_sub.add_parser("reset", help="Reset progress state")
     progress_reset.add_argument("--state-file", type=Path, default=None)
+
+    tdl = sub.add_parser("tdl", help="Run TDL side-quest challenges")
+    tdl_sub = tdl.add_subparsers(dest="tdl_command", required=True)
+
+    tdl_list = tdl_sub.add_parser("list", help="List TDL challenges and unlock status")
+    tdl_list.add_argument("--state-file", type=Path, default=None)
+
+    tdl_show = tdl_sub.add_parser("show", help="Show one TDL challenge")
+    tdl_show.add_argument("challenge_id")
+
+    tdl_check = tdl_sub.add_parser("check", help="Run TDL pytest checks for one challenge or all")
+    tdl_check.add_argument("target", help="TDL challenge ID or 'all'")
+
+    tdl_run = tdl_sub.add_parser("run", help="Run one TDL challenge scenario")
+    tdl_run.add_argument("challenge_id")
+    tdl_run.add_argument("--state-file", type=Path, default=None, help="Optional TDL progress state file to update")
+
+    tdl_progress = tdl_sub.add_parser("progress", help="Show and manage TDL progress")
+    tdl_progress_sub = tdl_progress.add_subparsers(dest="tdl_progress_command", required=True)
+
+    tdl_progress_show = tdl_progress_sub.add_parser("show", help="Show TDL progress summary")
+    tdl_progress_show.add_argument("--state-file", type=Path, default=None)
+
+    tdl_progress_reset = tdl_progress_sub.add_parser("reset", help="Reset TDL progress state")
+    tdl_progress_reset.add_argument("--state-file", type=Path, default=None)
 
     report = sub.add_parser("report", help="Generate learner readiness report")
     report.add_argument("--state-file", type=Path, default=None)
@@ -248,6 +285,139 @@ def _cmd_progress_reset(state_file: Path | None) -> int:
     return 0
 
 
+def _resolve_tdl_state_file(path: Path | None) -> Path:
+    return path or DEFAULT_TDL_PROGRESS_PATH
+
+
+def _cmd_tdl_list(state_file: Path | None) -> int:
+    state_path = _resolve_tdl_state_file(state_file)
+    try:
+        state = load_tdl_progress(state_path)
+    except (OSError, ValueError) as exc:
+        print(f"failed to load tdl progress: {exc}")
+        return 1
+
+    completed = set(state.completed)
+    unlocked = set(unlocked_tdl_challenges(state))
+    for entry in TDL_CHALLENGES:
+        challenge_id = entry["id"]
+        if challenge_id in completed:
+            status = "DONE"
+        elif challenge_id in unlocked:
+            status = "UNLOCKED"
+        else:
+            status = "LOCKED"
+        print(
+            f"{challenge_id}: {entry['title']} "
+            f"[{entry['domain']}/{entry['kind']}] status={status} xp={entry['xp']}"
+        )
+    return 0
+
+
+def _cmd_tdl_show(challenge_id: str) -> int:
+    entry = get_tdl_challenge(challenge_id)
+    if entry is None:
+        print(f"unknown tdl challenge: {challenge_id}")
+        return 1
+    prereqs = ", ".join(entry["prereqs"]) if entry["prereqs"] else "none"
+    symbols = ", ".join(entry["symbols"])
+    print(f"id: {entry['id']}")
+    print(f"title: {entry['title']}")
+    print(f"domain: {entry['domain']}")
+    print(f"kind: {entry['kind']}")
+    print(f"prereqs: {prereqs}")
+    print(f"xp: {entry['xp']}")
+    print(f"tdl.target: {entry['path']}")
+    print(f"tdl.symbols: {symbols}")
+    print(f"tdl.summary: {entry['summary']}")
+    return 0
+
+
+def _cmd_tdl_check(target: str) -> int:
+    normalized = target.strip()
+    if not normalized:
+        print("unknown tdl check target: empty")
+        print("valid examples: tdl_auto_01_yang_path_validation, all")
+        return 1
+    if normalized.lower() != "all" and get_tdl_challenge(normalized) is None:
+        print(f"unknown tdl check target: {target}")
+        print("valid examples: tdl_auto_01_yang_path_validation, all")
+        return 1
+    repo_root = Path(__file__).resolve().parents[2]
+    print(f"running tdl checks: target={normalized}")
+    return run_tdl_checks(target=normalized, repo_root=repo_root)
+
+
+def _cmd_tdl_run(challenge_id: str, state_file: Path | None) -> int:
+    entry = get_tdl_challenge(challenge_id)
+    if entry is None:
+        print(f"unknown tdl challenge: {challenge_id}")
+        return 1
+
+    state_path = _resolve_tdl_state_file(state_file)
+    try:
+        progress_state: TdlProgressState = load_tdl_progress(state_path)
+    except (OSError, ValueError) as exc:
+        print(f"failed to load tdl progress: {exc}")
+        return 1
+
+    completed = set(progress_state.completed)
+    unmet = tdl_missing_prereqs(challenge_id, completed)
+    if unmet:
+        print(f"blocked: {challenge_id} has unmet prerequisites: {', '.join(unmet)}")
+        return 2
+
+    result = run_tdl_challenge(challenge_id)
+    print(f"running tdl challenge: {challenge_id}")
+    for step in result.steps:
+        status = "PASS" if step.passed else "FAIL"
+        print(f"[{status}] {step.name}: {step.detail}")
+
+    checkpoints = ", ".join(result.checkpoints) if result.checkpoints else "none"
+    print(f"checkpoints: {checkpoints}")
+    code = 0 if result.passed else 4
+
+    try:
+        updated = apply_tdl_run_result(progress_state, challenge_id=challenge_id, passed=result.passed)
+        saved = save_tdl_progress(updated, state_path)
+        print(f"tdl progress updated: {saved}")
+    except (OSError, ValueError, KeyError) as exc:
+        print(f"failed to update tdl progress: {exc}")
+        return 1
+
+    return code
+
+
+def _cmd_tdl_progress_show(state_file: Path | None) -> int:
+    state_path = _resolve_tdl_state_file(state_file)
+    try:
+        state = load_tdl_progress(state_path)
+    except (OSError, ValueError) as exc:
+        print(f"failed to load tdl progress: {exc}")
+        return 1
+
+    total = len(TDL_CHALLENGES)
+    completed_count = len(state.completed)
+    unlocked = unlocked_tdl_challenges(state)
+    print(f"tdl.progress.file: {state_path}")
+    print(f"tdl.completed: {completed_count}/{total}")
+    print(f"tdl.xp: {state.total_xp}")
+    print(f"tdl.badges: {', '.join(state.badges) if state.badges else 'none'}")
+    print(f"tdl.unlocked: {', '.join(unlocked) if unlocked else 'none'}")
+    return 0
+
+
+def _cmd_tdl_progress_reset(state_file: Path | None) -> int:
+    state_path = _resolve_tdl_state_file(state_file)
+    try:
+        save_tdl_progress(clear_tdl_progress(), state_path)
+    except OSError as exc:
+        print(f"failed to reset tdl progress: {exc}")
+        return 1
+    print(f"tdl progress reset: {state_path}")
+    return 0
+
+
 def _stage_for_target(target: str) -> tuple[int, str] | None:
     normalized = target.strip()
     if not normalized:
@@ -404,6 +574,24 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_progress_mark(args.lab_id, args.state_file)
         if args.progress_command == "reset":
             return _cmd_progress_reset(args.state_file)
+        parser.print_help()
+        return 1
+    if args.command == "tdl":
+        if args.tdl_command == "list":
+            return _cmd_tdl_list(args.state_file)
+        if args.tdl_command == "show":
+            return _cmd_tdl_show(args.challenge_id)
+        if args.tdl_command == "check":
+            return _cmd_tdl_check(args.target)
+        if args.tdl_command == "run":
+            return _cmd_tdl_run(args.challenge_id, args.state_file)
+        if args.tdl_command == "progress":
+            if args.tdl_progress_command == "show":
+                return _cmd_tdl_progress_show(args.state_file)
+            if args.tdl_progress_command == "reset":
+                return _cmd_tdl_progress_reset(args.state_file)
+            parser.print_help()
+            return 1
         parser.print_help()
         return 1
     if args.command == "report":
