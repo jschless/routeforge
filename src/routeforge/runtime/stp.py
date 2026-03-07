@@ -72,14 +72,8 @@ def remove_link(links: list[Link], *, a: tuple[str, str], b: tuple[str, str]) ->
 
 
 def role_changes(previous: STPResult, current: STPResult) -> dict[tuple[str, str], tuple[str, str]]:
-    keys = set(previous.port_roles) | set(current.port_roles)
-    changes: dict[tuple[str, str], tuple[str, str]] = {}
-    for key in keys:
-        old = previous.port_roles.get(key, "DOWN")
-        new = current.port_roles.get(key, "DOWN")
-        if old != new:
-            changes[key] = (old, new)
-    return changes
+    # TODO(student): return all deterministic port-role transitions, defaulting missing ports to DOWN.
+    raise NotImplementedError("TODO: implement role_changes")
 
 
 def bpdu_guard_decision(*, port: tuple[str, str], edge_port: bool, bpdu_received: bool) -> GuardDecision:

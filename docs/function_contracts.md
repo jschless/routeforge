@@ -6,9 +6,9 @@ This reference is the canonical quick lookup for student target signatures and r
 | --- | --- | --- | --- |
 | 1 | `lab01_frame_and_headers` | `is_valid_mac(value: 'str') -> 'bool' -> bool<br>IPv4Header.validate(self) -> 'list[str]' -> list[str]<br>EthernetFrame.validate(self) -> 'list[str]' -> list[str]` | `PARSE_OK, PARSE_DROP` |
 | 2 | `lab02_mac_learning_switch` | `DataplaneSim._determine_forwarding_plan(self, *, ingress_interface: 'str', ingress_vlan: 'int', destination_mac: 'str') -> 'ForwardingPlan' -> ForwardingPlan` | `MAC_LEARN, L2_FLOOD, L2_UNICAST_FORWARD` |
-| 3 | `lab03_vlan_and_trunks` | `DataplaneSim._vlan_translation_checkpoint(self, *, ingress_vlan_id: 'int \| None', egress_vlan_id: 'int \| None') -> 'str \| None' -> str \| None` | `VLAN_CLASSIFY, VLAN_TAG_PUSH, VLAN_TAG_POP` |
+| 3 | `lab03_vlan_and_trunks` | `DataplaneSim._determine_egress_vlan_plan(self, *, ingress_vlan: 'int', ingress_tag: 'int \| None', egress_port_name: 'str') -> 'EgressVlanPlan' -> EgressVlanPlan` | `VLAN_CLASSIFY, VLAN_TAG_PUSH, VLAN_TAG_POP` |
 | 4 | `lab04_stp` | `compute_stp(bridges: 'list[Bridge]', links: 'list[Link]') -> 'STPResult' -> STPResult` | `STP_ROOT_CHANGE, STP_PORT_ROLE_CHANGE` |
-| 5 | `lab05_stp_convergence_and_protection` | `bpdu_guard_decision(*, port: 'tuple[str, str]', edge_port: 'bool', bpdu_received: 'bool') -> 'GuardDecision' -> GuardDecision` | `STP_TOPOLOGY_CHANGE, STP_GUARD_ACTION` |
+| 5 | `lab05_stp_convergence_and_protection` | `role_changes(previous: 'STPResult', current: 'STPResult') -> 'dict[tuple[str, str], tuple[str, str]]' -> dict[tuple[str, str], tuple[str, str]]<br>bpdu_guard_decision(*, port: 'tuple[str, str]', edge_port: 'bool', bpdu_received: 'bool') -> 'GuardDecision' -> GuardDecision` | `STP_TOPOLOGY_CHANGE, STP_GUARD_ACTION` |
 | 6 | `lab06_arp_and_adjacency` | `ArpAdjacencyTable.resolve(self, *, next_hop_ip: 'str', mac: 'str') -> 'list[str]' -> list[str]` | `ARP_REQUEST_TX, ARP_REPLY_RX, ARP_CACHE_UPDATE` |
 | 7 | `lab07_ipv4_subnet_and_rib` | `RibTable.lookup(self, destination_ip: 'str') -> 'RouteEntry \| None' -> RouteEntry \| None` | `RIB_ROUTE_INSTALL, ROUTE_LOOKUP, ROUTE_SELECT` |
 | 8 | `lab08_fib_forwarding_pipeline` | `forward_packet(packet: 'IPv4Packet', route: 'RouteEntry \| None') -> 'ForwardingDecision' -> ForwardingDecision` | `FIB_FORWARD, FIB_DROP, TTL_DECREMENT` |

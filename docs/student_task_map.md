@@ -14,9 +14,9 @@ It prints `student.stage`, `student.target`, `student.symbols`, and `student.sum
 | --- | --- | --- | --- |
 | 1 | `lab01_frame_and_headers` | `src/routeforge/model/packet.py` | `is_valid_mac`, `IPv4Header.validate`, `EthernetFrame.validate` |
 | 2 | `lab02_mac_learning_switch` | `src/routeforge/runtime/dataplane_sim.py` | `DataplaneSim._determine_forwarding_plan` |
-| 3 | `lab03_vlan_and_trunks` | `src/routeforge/runtime/dataplane_sim.py` | `DataplaneSim._vlan_translation_checkpoint` |
+| 3 | `lab03_vlan_and_trunks` | `src/routeforge/runtime/dataplane_sim.py` | `DataplaneSim._determine_egress_vlan_plan` |
 | 4 | `lab04_stp` | `src/routeforge/runtime/stp.py` | `compute_stp` |
-| 5 | `lab05_stp_convergence_and_protection` | `src/routeforge/runtime/stp.py` | `bpdu_guard_decision` |
+| 5 | `lab05_stp_convergence_and_protection` | `src/routeforge/runtime/stp.py` | `role_changes`, `bpdu_guard_decision` |
 | 6 | `lab06_arp_and_adjacency` | `src/routeforge/runtime/adjacency.py` | `ArpAdjacencyTable.resolve` |
 | 7 | `lab07_ipv4_subnet_and_rib` | `src/routeforge/runtime/l3.py` | `RibTable.lookup` |
 | 8 | `lab08_fib_forwarding_pipeline` | `src/routeforge/runtime/l3.py` | `forward_packet` |

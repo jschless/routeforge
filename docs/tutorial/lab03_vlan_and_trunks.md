@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `DataplaneSim._vlan_translation_checkpoint` in `src/routeforge/runtime/dataplane_sim.py`.
+- Implement `DataplaneSim._determine_egress_vlan_plan` in `src/routeforge/runtime/dataplane_sim.py`.
 - Deliver `access_to_trunk_tag_push`: access VLAN traffic is tagged when sent over trunk.
 - Deliver `trunk_to_access_tag_pop`: tagged trunk traffic is untagged on matching access port.
 - Validate internal behavior through checkpoints: PARSE_OK, VLAN_CLASSIFY, MAC_LEARN, L2_FLOOD, VLAN_TAG_PUSH, VLAN_TAG_POP.
@@ -15,16 +15,24 @@
 
 ## Concept walkthrough
 
-VLAN tagging/untagging and per-VLAN forwarding behavior. Student-mode coding target for this stage is `src/routeforge/runtime/dataplane_sim.py` (`DataplaneSim._vlan_translation_checkpoint`).
+VLAN tagging/untagging and per-VLAN forwarding behavior. Student-mode coding target for this stage is `src/routeforge/runtime/dataplane_sim.py` (`DataplaneSim._determine_egress_vlan_plan`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/dataplane_sim.py`
-- Symbols: `DataplaneSim._vlan_translation_checkpoint`
-- Why this target: Emit VLAN tag push/pop checkpoints on trunk/access transitions.
+- Symbols: `DataplaneSim._determine_egress_vlan_plan`
+- Why this target: Determine whether egress is allowed and what tag rewrite/checkpoint applies for each port.
 - Stage check: `routeforge check lab03`
+
+Function contract for this stage:
+
+- Symbol: `DataplaneSim._determine_egress_vlan_plan(self, *, ingress_vlan: int, ingress_tag: int | None, egress_port_name: str) -> EgressVlanPlan`
+- Required `EgressVlanPlan.allowed`: `True` when egress admission succeeds, otherwise `False`
+- Required `EgressVlanPlan.egress_vlan_id`: `None` for untagged egress, or VLAN ID for tagged trunk egress
+- Required `EgressVlanPlan.checkpoint`: `VLAN_TAG_PUSH`, `VLAN_TAG_POP`, or `None`
+- Required edge case: unknown egress port or VLAN not allowed must return `allowed=False`
 
 Suggested student walkthrough:
 
@@ -82,4 +90,3 @@ Checkpoint guide:
 
 - IEEE 802.1D (bridging and STP fundamentals).
 - IEEE 802.1Q (VLAN tagging and trunk behavior).
-

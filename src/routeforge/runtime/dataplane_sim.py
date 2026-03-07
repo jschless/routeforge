@@ -55,6 +55,13 @@ class ForwardingPlan:
     checkpoint: str
 
 
+@dataclass(frozen=True)
+class EgressVlanPlan:
+    allowed: bool
+    egress_vlan_id: int | None
+    checkpoint: str | None
+
+
 class DataplaneSim:
     def __init__(self, router: Router) -> None:
         self.router = router
@@ -69,15 +76,15 @@ class DataplaneSim:
         # TODO(student): implement deterministic L2 forwarding plan decisions.
         raise NotImplementedError("TODO: implement DataplaneSim._determine_forwarding_plan")
 
-    def _vlan_translation_checkpoint(self, *, ingress_vlan_id: int | None, egress_vlan_id: int | None) -> str | None:
-        # Keep no-translation paths working for earlier labs.
-        if ingress_vlan_id is None and egress_vlan_id is None:
-            return None
-        if ingress_vlan_id is not None and egress_vlan_id is not None:
-            return None
-        # TODO(student): emit VLAN_TAG_PUSH / VLAN_TAG_POP for translation paths.
-        raise NotImplementedError("TODO: implement DataplaneSim._vlan_translation_checkpoint")
-        return None
+    def _determine_egress_vlan_plan(
+        self,
+        *,
+        ingress_vlan: int,
+        ingress_tag: int | None,
+        egress_port_name: str,
+    ) -> EgressVlanPlan:
+        # TODO(student): implement deterministic egress VLAN admission and tag rewrite plan.
+        raise NotImplementedError("TODO: implement DataplaneSim._determine_egress_vlan_plan")
 
     def process_frame(self, *, ingress_interface: str, frame: EthernetFrame) -> FrameOutcome:
         iface = self.router.get_interface(ingress_interface)
@@ -142,22 +149,19 @@ class DataplaneSim:
 
         outgoing_frames: list[EgressFrame] = []
         for port_name in egress_ports:
-            port = self.router.get_interface(port_name)
-            if port is None:
-                continue
-            outgoing_vlan, allowed = port.egress_vlan(ingress_vlan)
-            if not allowed:
-                continue
-            translation_checkpoint = self._vlan_translation_checkpoint(
-                ingress_vlan_id=frame.vlan_id,
-                egress_vlan_id=outgoing_vlan,
+            plan = self._determine_egress_vlan_plan(
+                ingress_vlan=ingress_vlan,
+                ingress_tag=frame.vlan_id,
+                egress_port_name=port_name,
             )
-            if translation_checkpoint is not None and translation_checkpoint not in checkpoints:
-                checkpoints.append(translation_checkpoint)
+            if not plan.allowed:
+                continue
+            if plan.checkpoint is not None and plan.checkpoint not in checkpoints:
+                checkpoints.append(plan.checkpoint)
             outgoing_frames.append(
                 EgressFrame(
                     interface_name=port_name,
-                    vlan_id=outgoing_vlan,
+                    vlan_id=plan.egress_vlan_id,
                     src_mac=source_mac,
                     dst_mac=destination_mac,
                 )

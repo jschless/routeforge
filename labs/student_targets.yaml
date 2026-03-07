@@ -22,8 +22,8 @@ targets:
     stage: 3
     path: src/routeforge/runtime/dataplane_sim.py
     symbols:
-      - DataplaneSim._vlan_translation_checkpoint
-    summary: Emit VLAN tag push/pop checkpoints on trunk/access transitions.
+      - DataplaneSim._determine_egress_vlan_plan
+    summary: Compute deterministic egress VLAN admission/tag rewrite plans for trunk and access ports.
 
   - lab_id: lab04_stp
     stage: 4
@@ -36,8 +36,9 @@ targets:
     stage: 5
     path: src/routeforge/runtime/stp.py
     symbols:
+      - role_changes
       - bpdu_guard_decision
-    summary: Apply BPDU guard behavior on edge ports.
+    summary: Identify STP role transitions on reconvergence and enforce BPDU guard on edge ports.
 
   - lab_id: lab06_arp_and_adjacency
     stage: 6
