@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `emit_telemetry` in `src/routeforge/runtime/observability.py`.
+- Implement `readiness_check, emit_telemetry` in `src/routeforge/runtime/observability.py`.
 - Deliver `ops_readiness_check`: service health checks produce deterministic readiness status.
 - Deliver `ops_telemetry_emit`: telemetry export emits sorted counter payload for reproducible parsing.
 - Validate internal behavior through checkpoints: OPS_READINESS_CHECK, TELEMETRY_EMIT.
@@ -15,16 +15,23 @@
 
 ## Concept walkthrough
 
-Operational telemetry/readiness checks with deterministic outputs. Student-mode coding target for this stage is `src/routeforge/runtime/observability.py` (`emit_telemetry`).
+Operational telemetry/readiness checks with deterministic outputs. Student-mode coding target for this stage is `src/routeforge/runtime/observability.py` (`readiness_check, emit_telemetry`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/observability.py`
-- Symbols: `emit_telemetry`
-- Why this target: Emit deterministic telemetry payloads with stable ordering.
+- Symbols: `readiness_check, emit_telemetry`
+- Why this target: Build deterministic readiness and telemetry outputs for operations workflows.
 - Stage check: `routeforge check lab26`
+
+Function contract for this stage:
+
+- Symbol: `readiness_check(*, checks: dict[str, bool]) -> ReadinessResult`
+- Required behavior: sort failing check names and return `ready=False` when any fail
+- Symbol: `emit_telemetry(*, component: str, counters: dict[str, int], timestamp_s: int) -> dict[str, object]`
+- Required behavior: emit counters in stable key order and preserve component/timestamp
 
 Suggested student walkthrough:
 
@@ -77,4 +84,3 @@ Checkpoint guide:
 ## Standards and references
 
 - Operational readiness checks, telemetry hygiene, and deterministic output contracts.
-

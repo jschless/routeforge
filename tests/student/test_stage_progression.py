@@ -6,8 +6,11 @@ from routeforge.labs.conformance import load_conformance_matrix
 from routeforge.labs.exercises import run_lab
 from routeforge.labs.manifest import LABS
 from routeforge.model.packet import ETHERTYPE_IPV4, EthernetFrame, IPv4Header, is_valid_mac
+from routeforge.runtime.adjacency import ArpAdjacencyTable
 from routeforge.runtime.dataplane_sim import DataplaneSim
 from routeforge.runtime.interface import Interface
+from routeforge.runtime.observability import emit_telemetry, readiness_check
+from routeforge.runtime.ospf import DrCandidate, _election_order, failover_dr_bdr
 from routeforge.runtime.router import Router
 from routeforge.runtime.stp import (
     Bridge,
@@ -19,6 +22,7 @@ from routeforge.runtime.stp import (
     remove_link,
     role_changes,
 )
+from routeforge.runtime.transport import classify_flow, validate_udp
 
 
 def _required_checkpoints_for_lab(lab_id: str) -> set[str]:
@@ -161,6 +165,64 @@ def test_stage05_stp_role_changes_and_bpdu_guard() -> None:
     clear = bpdu_guard_decision(port=("S2", "Gi0/10"), edge_port=False, bpdu_received=True)
     assert clear.action == "FORWARD"
     assert clear.reason == "STP_GUARD_CLEAR"
+
+
+@pytest.mark.stage(6)
+def test_stage06_arp_queue_and_resolve() -> None:
+    table = ArpAdjacencyTable()
+    assert table.queue_packet(next_hop_ip="192.0.2.1", packet_id="pkt-1") is True
+    assert table.queue_packet(next_hop_ip="192.0.2.1", packet_id="pkt-2") is False
+    released = table.resolve(next_hop_ip="192.0.2.1", mac="00:de:ad:be:ef:01")
+    assert released == ["pkt-1", "pkt-2"]
+    assert table.lookup("192.0.2.1") == "00:de:ad:be:ef:01"
+
+
+@pytest.mark.stage(12)
+def test_stage12_ospf_election_order_and_failover() -> None:
+    candidates = [
+        DrCandidate(router_id="1.1.1.1", priority=90),
+        DrCandidate(router_id="2.2.2.2", priority=100),
+        DrCandidate(router_id="3.3.3.3", priority=100),
+    ]
+    ordered = _election_order(candidates)
+    assert [candidate.router_id for candidate in ordered] == ["3.3.3.3", "2.2.2.2", "1.1.1.1"]
+
+    dr, bdr = failover_dr_bdr(candidates, active_router_ids={"1.1.1.1", "3.3.3.3"})
+    assert dr == "3.3.3.3"
+    assert bdr == "1.1.1.1"
+
+
+@pytest.mark.stage(16)
+def test_stage16_classify_flow_and_validate_udp() -> None:
+    flow = classify_flow(
+        src_ip="198.51.100.10",
+        dst_ip="203.0.113.20",
+        src_port=40000,
+        dst_port=53,
+        protocol="udp",
+    )
+    assert flow.protocol == "UDP"
+    assert flow.src_port == 40000
+    assert flow.dst_port == 53
+
+    assert validate_udp(length_bytes=8, checksum_valid=True) is True
+    assert validate_udp(length_bytes=7, checksum_valid=True) is False
+    assert validate_udp(length_bytes=8, checksum_valid=False) is False
+
+
+@pytest.mark.stage(26)
+def test_stage26_readiness_and_telemetry() -> None:
+    readiness = readiness_check(checks={"bgp": True, "isis": False, "nve": True})
+    assert readiness.ready is False
+    assert readiness.failed_checks == ("isis",)
+
+    telemetry = emit_telemetry(
+        component="edge-1",
+        counters={"drops": 5, "forwarded": 200},
+        timestamp_s=1700000000,
+    )
+    assert telemetry["component"] == "edge-1"
+    assert list(telemetry["counters"].keys()) == ["drops", "forwarded"]
 
 
 @pytest.mark.parametrize(

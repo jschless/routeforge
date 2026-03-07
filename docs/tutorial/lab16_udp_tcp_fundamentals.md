@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `validate_udp` in `src/routeforge/runtime/transport.py`.
+- Implement `classify_flow, validate_udp` in `src/routeforge/runtime/transport.py`.
 - Deliver `flow_classify`: 5-tuple flow classification is deterministic.
 - Deliver `tcp_state_change`: TCP state machine reaches ESTABLISHED.
 - Deliver `udp_validate`: UDP header validation accepts valid datagram.
@@ -16,16 +16,23 @@
 
 ## Concept walkthrough
 
-TCP/UDP parsing and TCP state behavior for flow-level reasoning. Student-mode coding target for this stage is `src/routeforge/runtime/transport.py` (`validate_udp`).
+TCP/UDP parsing and TCP state behavior for flow-level reasoning. Student-mode coding target for this stage is `src/routeforge/runtime/transport.py` (`classify_flow, validate_udp`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/transport.py`
-- Symbols: `validate_udp`
-- Why this target: Validate UDP header length/checksum constraints.
+- Symbols: `classify_flow, validate_udp`
+- Why this target: Build deterministic 5-tuple flow identity and enforce UDP validity rules.
 - Stage check: `routeforge check lab16`
+
+Function contract for this stage:
+
+- Symbol: `classify_flow(*, src_ip: str, dst_ip: str, src_port: int, dst_port: int, protocol: str) -> FlowKey`
+- Required behavior: preserve endpoint/port values and normalize protocol casing deterministically
+- Symbol: `validate_udp(*, length_bytes: int, checksum_valid: bool) -> bool`
+- Required behavior: reject headers smaller than 8 bytes and reject invalid checksums
 
 Suggested student walkthrough:
 
@@ -81,4 +88,3 @@ Checkpoint guide:
 
 - RFC 768 (UDP).
 - RFC 9293 (TCP core behavior, obsoletes RFC 793).
-

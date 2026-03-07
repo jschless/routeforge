@@ -44,8 +44,9 @@ targets:
     stage: 6
     path: src/routeforge/runtime/adjacency.py
     symbols:
+      - ArpAdjacencyTable.queue_packet
       - ArpAdjacencyTable.resolve
-    summary: Resolve ARP entries and release queued packets.
+    summary: Queue packets on ARP miss and release them deterministically when adjacency resolves.
 
   - lab_id: lab07_ipv4_subnet_and_rib
     stage: 7
@@ -86,8 +87,9 @@ targets:
     stage: 12
     path: src/routeforge/runtime/ospf.py
     symbols:
+      - _election_order
       - failover_dr_bdr
-    summary: Re-elect DR/BDR after node loss.
+    summary: Order DR/BDR candidates deterministically and re-elect after active-node loss.
 
   - lab_id: lab13_ospf_lsa_flooding_and_lsdb
     stage: 13
@@ -114,8 +116,9 @@ targets:
     stage: 16
     path: src/routeforge/runtime/transport.py
     symbols:
+      - classify_flow
       - validate_udp
-    summary: Validate UDP header length/checksum constraints.
+    summary: Normalize transport flow keys and validate UDP length/checksum constraints.
 
   - lab_id: lab17_bfd_for_liveness
     stage: 17
@@ -184,8 +187,9 @@ targets:
     stage: 26
     path: src/routeforge/runtime/observability.py
     symbols:
+      - readiness_check
       - emit_telemetry
-    summary: Emit deterministic telemetry payloads with stable ordering.
+    summary: Compute deterministic readiness failures and emit stable telemetry payloads.
 
   - lab_id: lab27_capstone_incident_drill
     stage: 27

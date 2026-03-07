@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `failover_dr_bdr` in `src/routeforge/runtime/ospf.py`.
+- Implement `_election_order, failover_dr_bdr` in `src/routeforge/runtime/ospf.py`.
 - Deliver `ospf_dr_bdr_election`: DR/BDR selection follows deterministic priority and router-id ordering.
 - Deliver `ospf_dr_failover`: BDR is promoted to DR when original DR fails.
 - Validate internal behavior through checkpoints: OSPF_DR_ELECT, OSPF_BDR_ELECT, OSPF_DR_FAILOVER.
@@ -15,16 +15,23 @@
 
 ## Concept walkthrough
 
-OSPF network type behavior and DR/BDR election/failover. Student-mode coding target for this stage is `src/routeforge/runtime/ospf.py` (`failover_dr_bdr`).
+OSPF network type behavior and DR/BDR election/failover. Student-mode coding target for this stage is `src/routeforge/runtime/ospf.py` (`_election_order, failover_dr_bdr`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/ospf.py`
-- Symbols: `failover_dr_bdr`
-- Why this target: Re-elect DR/BDR after node loss.
+- Symbols: `_election_order, failover_dr_bdr`
+- Why this target: Implement deterministic candidate ordering and active-set failover election.
 - Stage check: `routeforge check lab12`
+
+Function contract for this stage:
+
+- Symbol: `_election_order(candidates: list[DrCandidate]) -> list[DrCandidate]`
+- Required behavior: sort by highest priority first, then highest router-id
+- Symbol: `failover_dr_bdr(candidates: list[DrCandidate], *, active_router_ids: set[str]) -> tuple[str, str | None]`
+- Required behavior: filter to active routers, then elect DR/BDR using deterministic order
 
 Suggested student walkthrough:
 
@@ -78,4 +85,3 @@ Checkpoint guide:
 ## Standards and references
 
 - RFC 2328 (OSPFv2).
-
