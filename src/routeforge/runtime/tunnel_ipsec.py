@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from ipaddress import IPv4Address, IPv4Network
 
 
 @dataclass(frozen=True)

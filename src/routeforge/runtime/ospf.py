@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from ipaddress import IPv4Network
-import heapq
 
 
 def neighbor_hello_transition(
