@@ -166,6 +166,16 @@ Use this order:
 - Full chapter walkthroughs: [tutorial](tutorial)
 - Start here: [Lab 01](tutorial/lab01_frame_and_headers.md)
 
+## How To Know Exact Strings To Return
+
+When a lab expects exact strings (error codes, reasons, actions):
+
+1. Read the target function signature in [function_contracts.md](function_contracts.md).
+2. Read the lab tutorial chapter for required behavior.
+3. Use module constants when provided (for example, Lab 01 error constants in `src/routeforge/model/packet.py`).
+
+Do not invent new string values if the lab already defines contract strings.
+
 ## Core Commands Reference
 
 - `routeforge labs`
