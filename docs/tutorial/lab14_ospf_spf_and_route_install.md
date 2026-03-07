@@ -65,7 +65,7 @@ routeforge debug explain --trace /tmp/lab14_ospf_spf_and_route_install.jsonl --s
 Checkpoint guide:
 
 - `OSPF_SPF_RUN`: Deterministic SPF, ECMP policy, and route installation.
-- `RIB_ROUTE_INSTALL`: Connected/static route install and deterministic LPM selection.; Deterministic SPF, ECMP policy, and route installation.
+- `RIB_ROUTE_INSTALL`: Deterministic SPF route install into RIB after SPF computation.
 
 ## Failure drills and troubleshooting flow
 
@@ -77,4 +77,3 @@ Checkpoint guide:
 ## Standards and references
 
 - RFC 2328 (OSPFv2).
-
