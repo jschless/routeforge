@@ -19,3 +19,11 @@ def test_student_target_signatures_are_rendered() -> None:
     targets = load_student_targets()
     sigs = signatures_for_target(targets["lab01_frame_and_headers"])
     assert any("is_valid_mac" in sig for sig in sigs)
+
+
+def test_student_target_signatures_are_cleanly_formatted() -> None:
+    targets = load_student_targets()
+    sigs = signatures_for_target(targets["lab12_ospf_network_types_and_dr_bdr"])
+    assert all("-> unknown" not in sig for sig in sigs)
+    assert all(sig.count("->") == 1 for sig in sigs)
+    assert all("routeforge." not in sig for sig in sigs)

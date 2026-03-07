@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import importlib
 import inspect
 from pathlib import Path
+import re
 from typing import Any
 
 import yaml
@@ -87,21 +88,24 @@ def _path_to_module(path: str) -> str:
     return normalized.replace("/", ".")
 
 
+_MODULE_PREFIX_RE = re.compile(r"\brouteforge(?:\.[A-Za-z_][A-Za-z0-9_]*)+\.")
+
+
+def _shorten_signature_text(text: str) -> str:
+    return _MODULE_PREFIX_RE.sub("", text)
+
+
 def _resolve_symbol_signature(*, module_name: str, symbol: str) -> str:
     module = importlib.import_module(module_name)
     parts = symbol.split(".")
     target: Any = module
     for part in parts:
         target = getattr(target, part)
-    signature = inspect.signature(target)
-    return_annotation = signature.return_annotation
-    if return_annotation is inspect.Signature.empty:
-        rendered_return = "Any"
-    elif isinstance(return_annotation, str):
-        rendered_return = return_annotation
-    else:
-        rendered_return = getattr(return_annotation, "__name__", str(return_annotation))
-    return f"{symbol}{signature} -> {rendered_return}"
+    try:
+        signature = inspect.signature(target, eval_str=True)
+    except Exception:
+        signature = inspect.signature(target)
+    return f"{symbol}{_shorten_signature_text(str(signature))}"
 
 
 def signatures_for_target(target: StudentTarget) -> tuple[str, ...]:
