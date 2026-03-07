@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ipaddress import IPv4Address
+from ipaddress import IPv4Address, ip_network
 import re
 
 
@@ -220,3 +220,250 @@ def wireless_incident_triage(
     if not dhcp_ok:
         return "DHCP_FAILURE"
     return "HEALTHY"
+
+
+def prefix_list_match(
+    *,
+    prefix: str,
+    rules: list[tuple[str, str, int | None, int | None]],
+) -> tuple[str, str]:
+    """Evaluate prefix-list style rules and return PERMIT/DENY decision."""
+    route = ip_network(prefix, strict=False)
+    for action, base_prefix, ge, le in rules:
+        base = ip_network(base_prefix, strict=False)
+        if not route.subnet_of(base):
+            continue
+        if ge is not None and route.prefixlen < ge:
+            continue
+        if le is not None and route.prefixlen > le:
+            continue
+        return action.upper(), "RULE_MATCH"
+    return "DENY", "NO_MATCH"
+
+
+def route_map_eval(
+    *,
+    route: dict[str, object],
+    sequences: list[tuple[int, str, bool]],
+) -> tuple[str, int | str]:
+    """Evaluate route-map sequence matches in deterministic sequence order."""
+    del route
+    for seq, action, matched in sorted(sequences, key=lambda item: item[0]):
+        if matched:
+            return action.upper(), seq
+    return "DENY", "IMPLICIT_DENY"
+
+
+def community_policy_apply(
+    *,
+    current: set[str],
+    operation: str,
+    values: set[str],
+) -> set[str]:
+    """Apply add/remove/replace operations to BGP communities."""
+    op = operation.upper()
+    if op == "ADD":
+        return set(current) | set(values)
+    if op == "REMOVE":
+        return set(current) - set(values)
+    if op == "REPLACE":
+        return set(values)
+    raise ValueError("operation must be ADD, REMOVE, or REPLACE")
+
+
+def attribute_policy_transform(
+    *,
+    local_pref: int,
+    med: int,
+    policy: dict[str, int],
+) -> tuple[int, int]:
+    """Apply optional local-pref and MED policy overrides."""
+    return policy.get("local_pref", local_pref), policy.get("med", med)
+
+
+def policy_pipeline_decision(
+    *,
+    prefix: str,
+    prefix_rules: list[tuple[str, str, int | None, int | None]],
+    route_map_sequences: list[tuple[int, str, bool]],
+    communities: set[str],
+    community_operation: str,
+    community_values: set[str],
+    local_pref: int,
+    med: int,
+    attr_policy: dict[str, int],
+) -> tuple[str, str | dict[str, object]]:
+    """Run a deterministic routing policy pipeline over one route."""
+    prefix_action, _ = prefix_list_match(prefix=prefix, rules=prefix_rules)
+    if prefix_action != "PERMIT":
+        return "DROP", "PREFIX_DENY"
+
+    route_action, route_ref = route_map_eval(route={"prefix": prefix}, sequences=route_map_sequences)
+    if route_action != "PERMIT":
+        return "DROP", f"ROUTE_MAP_{route_ref}"
+
+    updated_communities = community_policy_apply(
+        current=communities,
+        operation=community_operation,
+        values=community_values,
+    )
+    updated_local_pref, updated_med = attribute_policy_transform(
+        local_pref=local_pref,
+        med=med,
+        policy=attr_policy,
+    )
+    return (
+        "ADVERTISE",
+        {
+            "communities": tuple(sorted(updated_communities)),
+            "local_pref": updated_local_pref,
+            "med": updated_med,
+        },
+    )
+
+
+def ldp_label_allocate(
+    *,
+    fec: str,
+    bindings: dict[str, int],
+    start_label: int = 16000,
+) -> tuple[dict[str, int], int]:
+    """Allocate deterministic LDP labels with stable reuse for existing FECs."""
+    updated = dict(bindings)
+    if fec in updated:
+        return updated, updated[fec]
+    next_label = max(updated.values(), default=start_label - 1) + 1
+    updated[fec] = next_label
+    return updated, next_label
+
+
+def mpls_forward_action(
+    *,
+    incoming_labeled: bool,
+    penultimate_hop: bool,
+    outgoing_label: int | None,
+) -> tuple[str, int | None]:
+    """Return PUSH/SWAP/POP/DROP action for MPLS forwarding stage."""
+    if not incoming_labeled and outgoing_label is not None:
+        return "PUSH", outgoing_label
+    if penultimate_hop and outgoing_label in {None, 3}:
+        return "POP", None
+    if outgoing_label is not None:
+        return "SWAP", outgoing_label
+    return "DROP", None
+
+
+def vrf_rt_import_export(
+    *,
+    import_rts: set[str],
+    export_rts: set[str],
+    route_rt: str,
+    direction: str,
+) -> tuple[str, str]:
+    """Return IMPORT/EXPORT/REJECT action for route-target policy."""
+    op = direction.upper()
+    if op == "IMPORT":
+        return ("IMPORT", route_rt) if route_rt in import_rts else ("REJECT", route_rt)
+    if op == "EXPORT":
+        return ("EXPORT", route_rt) if route_rt in export_rts else ("REJECT", route_rt)
+    raise ValueError("direction must be IMPORT or EXPORT")
+
+
+def vpnv4_install_decision(*, next_hop_reachable: bool, rt_action: str) -> tuple[str, str]:
+    """Return INSTALL/SUPPRESS decision for VPNv4 route install gate."""
+    if not next_hop_reachable:
+        return "SUPPRESS", "NH_UNREACHABLE"
+    if rt_action == "IMPORT":
+        return "INSTALL", "NH_REACHABLE"
+    return "SUPPRESS", "RT_REJECT"
+
+
+def l3vpn_trace_forward(
+    *,
+    next_hop_reachable: bool,
+    import_rts: set[str],
+    route_rt: str,
+    incoming_labeled: bool,
+    penultimate_hop: bool,
+    outgoing_label: int | None,
+) -> tuple[str, tuple[str, ...] | str]:
+    """Trace L3VPN import/install/forward stages with deterministic failure reason."""
+    rt_action, _ = vrf_rt_import_export(
+        import_rts=import_rts,
+        export_rts=set(),
+        route_rt=route_rt,
+        direction="IMPORT",
+    )
+    install_action, reason = vpnv4_install_decision(next_hop_reachable=next_hop_reachable, rt_action=rt_action)
+    if install_action != "INSTALL":
+        return "DROP", reason
+
+    mpls_action, label = mpls_forward_action(
+        incoming_labeled=incoming_labeled,
+        penultimate_hop=penultimate_hop,
+        outgoing_label=outgoing_label,
+    )
+    if mpls_action == "DROP":
+        return "DROP", "MPLS_UNRESOLVED"
+
+    checkpoints = ["RT_IMPORT", "VPN_INSTALL", f"MPLS_{mpls_action}"]
+    if label is not None:
+        checkpoints.append(f"LABEL_{label}")
+    return "FORWARD", tuple(checkpoints)
+
+
+def hsrp_priority_recompute(*, base_priority: int, track_decrement: int, tracked_object_up: bool) -> int:
+    """Recompute HSRP priority from tracking object health."""
+    if tracked_object_up:
+        return base_priority
+    return max(0, base_priority - max(0, track_decrement))
+
+
+def bfd_flap_dampening(
+    *,
+    flap_count: int,
+    suppress_threshold: int,
+    hold_down_seconds: int,
+    elapsed_seconds: int,
+) -> tuple[str, int]:
+    """Return SUPPRESS/UNSUPPRESS state with remaining hold-down seconds."""
+    if flap_count >= suppress_threshold and elapsed_seconds < hold_down_seconds:
+        return "SUPPRESS", hold_down_seconds - elapsed_seconds
+    return "UNSUPPRESS", 0
+
+
+def isis_lsp_pacing(
+    *,
+    queued_lsps: tuple[str, ...],
+    tokens: int,
+    replenish: int,
+    bucket_max: int,
+) -> tuple[tuple[str, ...], tuple[str, ...], int]:
+    """Send queued IS-IS LSPs based on deterministic token bucket pacing."""
+    available = min(bucket_max, max(0, tokens) + max(0, replenish))
+    send_count = min(len(queued_lsps), available)
+    sent = queued_lsps[:send_count]
+    remaining = queued_lsps[send_count:]
+    return sent, remaining, available - send_count
+
+
+def gr_stale_path_action(*, stale_seconds_remaining: int) -> tuple[str, int]:
+    """Return RETAIN_STALE or FLUSH_STALE based on stale-route timer."""
+    if stale_seconds_remaining > 0:
+        return "RETAIN_STALE", stale_seconds_remaining
+    return "FLUSH_STALE", 0
+
+
+def control_plane_stability_triage(
+    *,
+    hsrp_priority: int,
+    hsrp_min_priority: int,
+    bfd_state: str,
+    stale_state: str,
+) -> tuple[str, str]:
+    """Classify control-plane stability incident severity deterministically."""
+    if bfd_state == "SUPPRESS" and stale_state == "FLUSH_STALE":
+        return "CRITICAL", "CONTROL_PLANE_UNSTABLE"
+    if hsrp_priority < hsrp_min_priority:
+        return "DEGRADED", "HSRP_PRIORITY_LOW"
+    return "HEALTHY", "STABLE"

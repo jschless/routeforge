@@ -59,18 +59,36 @@ Notes:
 | `tdl_wlan_03_roaming_decision` | Wireless | mission | 100 | `roaming_decision` |
 | `tdl_wlan_04_wmm_queue_mapping` | Wireless | mission | 100 | `wmm_queue_map` |
 | `tdl_wlan_boss_site_incident_triage` | Wireless | boss | 300 | `wireless_incident_triage` |
+| `tdl_route_01_prefix_list_match` | Routing | mission | 100 | `prefix_list_match` |
+| `tdl_route_02_route_map_sequence_eval` | Routing | mission | 100 | `route_map_eval` |
+| `tdl_route_03_bgp_community_policy` | Routing | mission | 100 | `community_policy_apply` |
+| `tdl_route_04_local_pref_and_med_policy` | Routing | mission | 100 | `attribute_policy_transform` |
+| `tdl_route_boss_policy_pipeline_debug` | Routing | boss | 300 | `policy_pipeline_decision` |
+| `tdl_mpls_01_ldp_label_allocation` | MPLS | mission | 100 | `ldp_label_allocate` |
+| `tdl_mpls_02_php_forwarding_decision` | MPLS | mission | 100 | `mpls_forward_action` |
+| `tdl_mpls_03_l3vpn_rt_import_export` | MPLS | mission | 100 | `vrf_rt_import_export` |
+| `tdl_mpls_04_vpnv4_next_hop_reachability` | MPLS | mission | 100 | `vpnv4_install_decision` |
+| `tdl_mpls_boss_l3vpn_data_plane_trace` | MPLS | boss | 300 | `l3vpn_trace_forward` |
+| `tdl_res_01_hsrp_priority_tracking` | Resiliency | mission | 100 | `hsrp_priority_recompute` |
+| `tdl_res_02_bfd_flap_dampening` | Resiliency | mission | 100 | `bfd_flap_dampening` |
+| `tdl_res_03_isis_lsp_pacing` | Resiliency | mission | 100 | `isis_lsp_pacing` |
+| `tdl_res_04_graceful_restart_stale_timer` | Resiliency | mission | 100 | `gr_stale_path_action` |
+| `tdl_res_boss_control_plane_stability_incident` | Resiliency | boss | 300 | `control_plane_stability_triage` |
 
 ## XP and Badges
 
 - Missions: 100 XP each
 - Bosses: 300 XP each
-- Max XP: 2100
+- Max XP: 4200
 
 Badges:
 
 - `automation_complete`
 - `multicast_complete`
 - `wireless_complete`
+- `routing_complete`
+- `mpls_complete`
+- `resiliency_complete`
 - `tdl_master`
 
 ## Common Failure Patterns
