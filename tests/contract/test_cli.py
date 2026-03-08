@@ -6,9 +6,29 @@ import pytest
 
 from routeforge.cli import main
 from routeforge.labs.assessment import load_assessment_rubric
+from routeforge.labs.contracts import FeatureOutcome, LabStepResult, build_result
 from routeforge.labs.manifest import LABS
 from routeforge.labs.progress import ProgressState, save_progress
 from routeforge.labs.student_checks import StudentCheckFailure, StudentCheckRun
+
+
+def _passing_lab_result(lab_id: str, *, step_name: str = "stubbed_step"):
+    return build_result(
+        lab_id,
+        [
+            LabStepResult(
+                name=step_name,
+                passed=True,
+                detail="stubbed lab result for CLI contract testing",
+                outcome=FeatureOutcome(
+                    action="PASS",
+                    reason="stubbed lab result for CLI contract testing",
+                    checkpoints=("CLI_TEST_PASS",),
+                    details={},
+                ),
+            )
+        ],
+    )
 
 
 def test_labs_command_runs() -> None:
@@ -38,7 +58,11 @@ def test_run_command_blocks_unmet_prereqs(capsys) -> None:
     assert "unmet prerequisites: lab01_frame_and_headers" in output
 
 
-def test_run_command_allows_completed_prereq() -> None:
+def test_run_command_allows_completed_prereq(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(
+        "routeforge.cli.run_lab",
+        lambda lab_id: _passing_lab_result(lab_id, step_name="unknown_unicast_flood"),
+    )
     assert (
         main(
             [
@@ -75,7 +99,11 @@ def test_run_lab05_blocks_missing_earlier_labs(capsys) -> None:
     assert "lab03_vlan_and_trunks" in output
 
 
-def test_run_lab06_allows_when_prereqs_met() -> None:
+def test_run_lab06_allows_when_prereqs_met(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(
+        "routeforge.cli.run_lab",
+        lambda lab_id: _passing_lab_result(lab_id, step_name="arp_resolution"),
+    )
     assert (
         main(
             [
@@ -125,7 +153,11 @@ def test_run_lab27_blocks_missing_chain(capsys) -> None:
     assert "lab01_frame_and_headers" in output
 
 
-def test_run_lab27_allows_when_prereqs_met() -> None:
+def test_run_lab27_allows_when_prereqs_met(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(
+        "routeforge.cli.run_lab",
+        lambda lab_id: _passing_lab_result(lab_id, step_name="incident_resolved"),
+    )
     prereqs = [entry["id"] for entry in LABS if entry["id"] != "lab27_capstone_incident_drill"]
     argv = ["run", "lab27_capstone_incident_drill"]
     for prereq in prereqs:
@@ -398,7 +430,11 @@ def test_run_with_state_file_updates_progress(tmp_path, capsys) -> None:
     assert f"labs.completed: 1/{total_labs}" in show_out
 
 
-def test_run_uses_saved_progress_for_prereqs(tmp_path, capsys) -> None:
+def test_run_uses_saved_progress_for_prereqs(monkeypatch, tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(
+        "routeforge.cli.run_lab",
+        lambda lab_id: _passing_lab_result(lab_id, step_name="unknown_unicast_flood"),
+    )
     state = tmp_path / "progress.json"
     assert main(["progress", "mark", "lab01_frame_and_headers", "--state-file", str(state)]) == 0
     capsys.readouterr()

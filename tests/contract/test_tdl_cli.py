@@ -3,7 +3,27 @@ from __future__ import annotations
 import subprocess
 
 from routeforge.cli import main
+from routeforge.tdl.contracts import TdlOutcome, TdlStepResult, build_tdl_result
 from routeforge.tdl.manifest import TDL_CHALLENGES
+
+
+def _passing_tdl_result(challenge_id: str):
+    return build_tdl_result(
+        challenge_id,
+        [
+            TdlStepResult(
+                name="stubbed_tdl_step",
+                passed=True,
+                detail="stubbed TDL result for CLI contract testing",
+                outcome=TdlOutcome(
+                    action="PASS",
+                    reason="stubbed TDL result for CLI contract testing",
+                    checkpoints=("TDL_CLI_TEST_PASS",),
+                    details={},
+                ),
+            )
+        ],
+    )
 
 
 def test_tdl_list_and_show_commands(capsys) -> None:
@@ -26,7 +46,8 @@ def test_tdl_run_blocks_unmet_prereqs(capsys, tmp_path) -> None:
     assert "unmet prerequisites: tdl_auto_01_yang_path_validation" in output
 
 
-def test_tdl_run_updates_progress_and_xp(capsys, tmp_path) -> None:
+def test_tdl_run_updates_progress_and_xp(monkeypatch, capsys, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr("routeforge.cli.run_tdl_challenge", _passing_tdl_result)
     state = tmp_path / "tdl-progress.json"
     assert main(["tdl", "run", "tdl_auto_01_yang_path_validation", "--state-file", str(state)]) == 0
     run_output = capsys.readouterr().out
@@ -38,7 +59,8 @@ def test_tdl_run_updates_progress_and_xp(capsys, tmp_path) -> None:
     assert "tdl.xp: 100" in show_output
 
 
-def test_tdl_run_without_state_file_updates_default_progress(capsys) -> None:
+def test_tdl_run_without_state_file_updates_default_progress(monkeypatch, capsys) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr("routeforge.cli.run_tdl_challenge", _passing_tdl_result)
     assert main(["tdl", "run", "tdl_auto_01_yang_path_validation"]) == 0
     run_output = capsys.readouterr().out
     assert "tdl progress updated:" in run_output
