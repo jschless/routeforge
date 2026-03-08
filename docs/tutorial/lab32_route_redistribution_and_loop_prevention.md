@@ -6,7 +6,7 @@
 - Deliver `redist_import`: new route is imported into target protocol.
 - Deliver `redist_tag_set`: redistributed route is tagged for loop prevention.
 - Deliver `redist_loop_suppress`: re-seen tag is suppressed to prevent loops.
-- Validate internal behavior through checkpoints: REDIST_IMPORT, REDIST_LOOP_SUPPRESS.
+- Validate internal behavior through checkpoints: REDIST_IMPORT, TAG_SET, LOOP_SUPPRESS.
 
 ## Prerequisite recap
 
@@ -80,7 +80,7 @@ Expected outcomes:
 - `redist_import` should print `[PASS]` (new route is imported into target protocol).
 - `redist_tag_set` should print `[PASS]` (redistributed route is tagged for loop prevention).
 - `redist_loop_suppress` should print `[PASS]` (re-seen tag is suppressed to prevent loops).
-- Run output includes checkpoints: REDIST_IMPORT, REDIST_LOOP_SUPPRESS.
+- Run output includes checkpoints: REDIST_IMPORT, TAG_SET, LOOP_SUPPRESS.
 
 ## Debug trace checkpoints and interpretation guidance
 
@@ -95,8 +95,8 @@ routeforge debug explain --trace /tmp/lab32_route_redistribution_and_loop_preven
 Checkpoint guide:
 
 - `REDIST_IMPORT`: fires when a route is successfully imported across protocol boundaries. The tag for this route was absent from `existing_tags`, so the function added it to a new copy of the set and returned `"IMPORT"`. If this checkpoint is missing, check that your tag comparison uses the exact string produced by `build_redistribution_tag` (upper-case protocol, colon separator, then the prefix as-is).
-
-- `REDIST_LOOP_SUPPRESS`: fires when a route is detected as a redistribution loop and silently dropped. The canonical tag was already present in `existing_tags`, so the function returned `"LOOP_SUPPRESS"` without modifying the set. If this checkpoint is missing when you expect suppression, verify that you are checking tag membership before mutating the set and that you are not returning `"IMPORT"` unconditionally.
+- `TAG_SET`: fires when the canonical redistribution tag is added to the route's tag set on a successful import. If this checkpoint is missing, your successful import path is not persisting the new tag.
+- `LOOP_SUPPRESS`: fires when a route is detected as a redistribution loop and silently dropped. The canonical tag was already present in `existing_tags`, so the function returned `"LOOP_SUPPRESS"` without modifying the set. If this checkpoint is missing when you expect suppression, verify that you are checking tag membership before mutating the set and that you are not returning `"IMPORT"` unconditionally.
 
 ## Failure drills and troubleshooting flow
 

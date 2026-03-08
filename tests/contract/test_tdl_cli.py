@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+
 from routeforge.cli import main
 from routeforge.tdl.manifest import TDL_CHALLENGES
 
@@ -36,10 +38,39 @@ def test_tdl_run_updates_progress_and_xp(capsys, tmp_path) -> None:
     assert "tdl.xp: 100" in show_output
 
 
+def test_tdl_run_without_state_file_updates_default_progress(capsys) -> None:
+    assert main(["tdl", "run", "tdl_auto_01_yang_path_validation"]) == 0
+    run_output = capsys.readouterr().out
+    assert "tdl progress updated:" in run_output
+
+    assert main(["tdl", "progress", "show"]) == 0
+    show_output = capsys.readouterr().out
+    assert f"tdl.completed: 1/{len(TDL_CHALLENGES)}" in show_output
+    assert "tdl.xp: 100" in show_output
+
+
 def test_tdl_check_command_rejects_unknown_target(capsys) -> None:
     assert main(["tdl", "check", "nope"]) == 1
     output = capsys.readouterr().out
     assert "unknown tdl check target" in output
+
+
+def test_tdl_check_runner_disables_pytest_plugin_autoload(monkeypatch) -> None:
+    from pathlib import Path
+
+    from routeforge.tdl import checks
+
+    captured: dict[str, object] = {}
+
+    def _fake_run(command, cwd, check, env):  # type: ignore[no-untyped-def]
+        captured["command"] = command
+        captured["cwd"] = cwd
+        captured["env"] = env
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(checks.subprocess, "run", _fake_run)
+    assert checks.run_tdl_checks(target="all", repo_root=Path.cwd()) == 0
+    assert captured["env"]["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] == "1"
 
 
 def test_tdl_check_command_calls_runner(monkeypatch, capsys) -> None:

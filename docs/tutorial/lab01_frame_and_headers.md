@@ -3,9 +3,9 @@
 ## Learning objectives
 
 - Implement `is_valid_mac, IPv4Header.validate, EthernetFrame.validate` in `src/routeforge/model/packet.py`.
-- Deliver `valid_frame_parses`: valid frame is accepted and forwarded/flooded.
+- Deliver `valid_frame_parses`: valid frame passes Ethernet and IPv4 validation.
 - Deliver `invalid_frame_drops`: invalid frame is rejected with parse-drop checkpoint.
-- Validate internal behavior through checkpoints: PARSE_OK, VLAN_CLASSIFY, MAC_LEARN, L2_FLOOD, PARSE_DROP.
+- Validate internal behavior through checkpoints: PARSE_OK, PARSE_DROP.
 
 ## Prerequisite recap
 
@@ -90,9 +90,9 @@ Expected outcomes:
 
 - `routeforge show` prints `student.stage`, `student.target`, and `student.symbols` matching this chapter.
 - `routeforge check lab01` passes when your implementation is complete for this stage.
-- `valid_frame_parses` should print `[PASS]` (valid frame is accepted and forwarded/flooded).
+- `valid_frame_parses` should print `[PASS]` (valid frame passes Ethernet and IPv4 validation).
 - `invalid_frame_drops` should print `[PASS]` (invalid frame is rejected with parse-drop checkpoint).
-- Run output includes checkpoints: PARSE_OK, VLAN_CLASSIFY, MAC_LEARN, L2_FLOOD, PARSE_DROP.
+- Run output includes checkpoints: PARSE_OK, PARSE_DROP.
 
 ## Debug trace checkpoints and interpretation guidance
 
@@ -109,11 +109,6 @@ Checkpoint guide:
 - `PARSE_OK`: Frame passed full L2+L3 validation — all fields are well-formed.
   If missing for a valid frame, your `EthernetFrame.validate()` or `IPv4Header.validate()`
   is returning unexpected errors.  Check the ethertype operator precedence bug.
-- `VLAN_CLASSIFY`: VLAN classification succeeded — the ingress port accepted the frame's
-  tag/untagged state.  Follows `PARSE_OK` on the valid frame path.
-- `MAC_LEARN`: Source MAC was learned into the FDB.  Expected for valid frames on known interfaces.
-- `L2_FLOOD`: Frame is being flooded (broadcast or unknown unicast destination).
-  Expected for the first frame in the lab since no FDB entries exist yet.
 - `PARSE_DROP`: Frame was dropped during or after parsing.  Expected for the invalid frame
   (bad src_mac).  If this fires for a valid frame, check your validation logic for false
   positives (e.g., the ethertype bug accepting out-of-range values).
@@ -137,7 +132,4 @@ Frame validation is the first contract boundary in RouteForge. The most importan
 ## Checkpoint Guide (Expanded)
 
 - `PARSE_OK`: Confirm this marker appears when your implementation follows the intended decision path.
-- `VLAN_CLASSIFY`: Confirm this marker appears when your implementation follows the intended decision path.
-- `MAC_LEARN`: Confirm this marker appears when your implementation follows the intended decision path.
-- `L2_FLOOD`: Confirm this marker appears when your implementation follows the intended decision path.
 - `PARSE_DROP`: Confirm this marker appears when your implementation follows the intended decision path.

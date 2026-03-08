@@ -39,18 +39,18 @@ It prints `student.stage`, `student.target`, `student.symbols`, and `student.sum
 | 25 | `lab25_tunnels_and_ipsec` | `src/routeforge/runtime/tunnel_ipsec.py` | `evaluate_ipsec_policy` |
 | 26 | `lab26_observability_and_ops` | `src/routeforge/runtime/observability.py` | `readiness_check`, `emit_telemetry` |
 | 27 | `lab27_capstone_incident_drill` | `src/routeforge/runtime/capstone.py` | `apply_step` |
-| 28 | `lab28_dhcp_snooping_and_dai` | `src/routeforge/runtime/phase2.py` | `learn_binding_if_trusted`, `dhcp_snooping_dai` |
-| 29 | `lab29_port_security_and_ip_source_guard` | `src/routeforge/runtime/phase2.py` | `update_secure_mac_table`, `port_security_ip_source_guard` |
-| 30 | `lab30_qos_policing_and_shaping` | `src/routeforge/runtime/phase2.py` | `apply_policer`, `qos_police_shape` |
-| 31 | `lab31_qos_congestion_avoidance_wred` | `src/routeforge/runtime/phase2.py` | `wred_decision_profile`, `qos_wred_decision` |
-| 32 | `lab32_route_redistribution_and_loop_prevention` | `src/routeforge/runtime/phase2.py` | `build_redistribution_tag`, `redistribute_with_loop_guard` |
-| 33 | `lab33_fhrp_tracking_and_failover` | `src/routeforge/runtime/phase2.py` | `tracked_object_result`, `fhrp_track_failover` |
-| 34 | `lab34_ipv6_nd_slaac_and_ra_guard` | `src/routeforge/runtime/phase2.py` | `derive_slaac_host_id`, `ipv6_nd_slaac_ra_guard` |
-| 35 | `lab35_ospfv3_adjacency_and_lsdb` | `src/routeforge/runtime/phase2.py` | `ospfv3_neighbor_result`, `ospfv3_adjacency_lsdb` |
-| 36 | `lab36_mpbgp_ipv6_unicast` | `src/routeforge/runtime/phase2.py` | `rank_mpbgp_path`, `mpbgp_ipv6_unicast` |
-| 37 | `lab37_mpls_ldp_label_forwarding` | `src/routeforge/runtime/phase2.py` | `lfib_mapping`, `mpls_ldp_lfib` |
-| 38 | `lab38_l3vpn_vrf_and_route_targets` | `src/routeforge/runtime/phase2.py` | `vrf_import_action`, `l3vpn_vrf_route_targets` |
-| 39 | `lab39_bgp_evpn_vxlan_basics` | `src/routeforge/runtime/phase2.py` | `evpn_type2_entry`, `evpn_vxlan_control` |
+| 28 | `lab28_dhcp_snooping_and_dai` | `src/routeforge/runtime/security.py` | `learn_binding_if_trusted`, `dhcp_snooping_dai` |
+| 29 | `lab29_port_security_and_ip_source_guard` | `src/routeforge/runtime/security.py` | `update_secure_mac_table`, `port_security_ip_source_guard` |
+| 30 | `lab30_qos_policing_and_shaping` | `src/routeforge/runtime/qos_advanced.py` | `apply_policer`, `qos_police_shape` |
+| 31 | `lab31_qos_congestion_avoidance_wred` | `src/routeforge/runtime/qos_advanced.py` | `wred_decision_profile`, `qos_wred_decision` |
+| 32 | `lab32_route_redistribution_and_loop_prevention` | `src/routeforge/runtime/routing_policy.py` | `build_redistribution_tag`, `redistribute_with_loop_guard` |
+| 33 | `lab33_fhrp_tracking_and_failover` | `src/routeforge/runtime/routing_policy.py` | `tracked_object_result`, `fhrp_track_failover` |
+| 34 | `lab34_ipv6_nd_slaac_and_ra_guard` | `src/routeforge/runtime/ipv6.py` | `derive_slaac_host_id`, `ipv6_nd_slaac_ra_guard` |
+| 35 | `lab35_ospfv3_adjacency_and_lsdb` | `src/routeforge/runtime/ipv6.py` | `ospfv3_neighbor_result`, `ospfv3_adjacency_lsdb` |
+| 36 | `lab36_mpbgp_ipv6_unicast` | `src/routeforge/runtime/ipv6.py` | `rank_mpbgp_path`, `mpbgp_ipv6_unicast` |
+| 37 | `lab37_mpls_ldp_label_forwarding` | `src/routeforge/runtime/mpls.py` | `lfib_mapping`, `mpls_ldp_lfib` |
+| 38 | `lab38_l3vpn_vrf_and_route_targets` | `src/routeforge/runtime/mpls.py` | `vrf_import_action`, `l3vpn_vrf_route_targets` |
+| 39 | `lab39_bgp_evpn_vxlan_basics` | `src/routeforge/runtime/mpls.py` | `evpn_type2_entry`, `evpn_vxlan_control` |
 
 Machine-readable source:
 

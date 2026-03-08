@@ -70,19 +70,20 @@ from routeforge.runtime.stp import (
 
 
 def _lab01() -> LabRunResult:
-    router = Router(node_id="R1")
-    router.add_interface(Interface(name="eth0", mode="access", access_vlan=1))
-    router.add_interface(Interface(name="eth1", mode="access", access_vlan=1))
-    sim = DataplaneSim(router)
-
     valid_frame = EthernetFrame(
         src_mac="00:11:22:33:44:55",
         dst_mac="00:11:22:33:44:66",
         ethertype=ETHERTYPE_IPV4,
         payload=IPv4Header(src_ip="192.0.2.10", dst_ip="192.0.2.20"),
     )
-    valid_outcome = sim.process_frame(ingress_interface="eth0", frame=valid_frame)
-    valid_passed = valid_outcome.action == "FLOOD" and "PARSE_OK" in valid_outcome.checkpoints
+    valid_errors = valid_frame.validate()
+    valid_outcome = FeatureOutcome(
+        action="ACCEPT" if not valid_errors else "DROP",
+        reason="FRAME_VALID" if not valid_errors else valid_errors[0],
+        checkpoints=("PARSE_OK",) if not valid_errors else ("PARSE_DROP",),
+        details={"errors": valid_errors},
+    )
+    valid_passed = valid_errors == []
 
     invalid_frame = EthernetFrame(
         src_mac="zz:11:22:33:44:55",
@@ -90,8 +91,14 @@ def _lab01() -> LabRunResult:
         ethertype=ETHERTYPE_IPV4,
         payload=IPv4Header(src_ip="192.0.2.10", dst_ip="192.0.2.20"),
     )
-    invalid_outcome = sim.process_frame(ingress_interface="eth0", frame=invalid_frame)
-    invalid_passed = invalid_outcome.action == "DROP" and "PARSE_DROP" in invalid_outcome.checkpoints
+    invalid_errors = invalid_frame.validate()
+    invalid_outcome = FeatureOutcome(
+        action="DROP" if invalid_errors else "ACCEPT",
+        reason=invalid_errors[0] if invalid_errors else "FRAME_VALID",
+        checkpoints=("PARSE_DROP",) if invalid_errors else ("PARSE_OK",),
+        details={"errors": invalid_errors},
+    )
+    invalid_passed = "L2_INVALID_SRC_MAC" in invalid_errors and "PARSE_DROP" in invalid_outcome.checkpoints
 
     return build_result(
         "lab01_frame_and_headers",
@@ -99,7 +106,7 @@ def _lab01() -> LabRunResult:
             LabStepResult(
                 name="valid_frame_parses",
                 passed=valid_passed,
-                detail="valid frame is accepted and forwarded/flooded",
+                detail="valid frame passes Ethernet and IPv4 validation",
                 outcome=valid_outcome,
             ),
             LabStepResult(

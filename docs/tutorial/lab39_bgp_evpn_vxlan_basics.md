@@ -6,7 +6,7 @@
 - Deliver `evpn_type2_learn`: EVPN type-2 route is learned for MAC/IP tuple.
 - Deliver `evpn_vni_map`: MAC/IP tuple is mapped to VNI context.
 - Deliver `evpn_mac_ip_install`: control-plane tuple installs in EVPN table.
-- Validate internal behavior through checkpoints: EVPN_INSTALL, EVPN_REJECT.
+- Validate internal behavior through checkpoints: EVPN_TYPE2_LEARN, VNI_MAP_RESOLVE, EVPN_MAC_IP_INSTALL.
 
 ## Prerequisite recap
 
@@ -84,7 +84,7 @@ Expected outcomes:
 - `evpn_type2_learn` should print `[PASS]` (EVPN type-2 route is learned for MAC/IP tuple).
 - `evpn_vni_map` should print `[PASS]` (MAC/IP tuple is mapped to VNI context).
 - `evpn_mac_ip_install` should print `[PASS]` (control-plane tuple installs in EVPN table).
-- Run output includes checkpoints: EVPN_INSTALL, EVPN_REJECT.
+- Run output includes checkpoints: EVPN_TYPE2_LEARN, VNI_MAP_RESOLVE, EVPN_MAC_IP_INSTALL.
 
 ## Debug trace checkpoints and interpretation guidance
 
@@ -98,9 +98,9 @@ routeforge debug explain --trace /tmp/lab39_bgp_evpn_vxlan_basics.jsonl --step e
 
 Checkpoint guide:
 
-- `EVPN_INSTALL`: fires when a BGP EVPN MAC/IP entry is installed into the local forwarding table — meaning the incoming VNI was found in `known_vnis` and the entry key was constructed and accepted. If this checkpoint is missing on a route that should be installed, the VNI membership check is returning false. Verify that `known_vnis` is treated as a set of integers and that the VNI argument is an `int` (not a string). Also confirm that `evpn_type2_entry` returns the key as `f"{mac}|{ip}|{vni}"` — a malformed key string will cause the install assertion to fail even after `EVPN_INSTALL` fires.
-
-- `EVPN_REJECT`: fires when a BGP EVPN entry is rejected because its VNI is not in `known_vnis` — the VTEP does not participate in that segment, so the route is discarded and the second element of the returned tuple must be an empty string `""`. If this checkpoint is missing when an unknown VNI is tested, `evpn_vxlan_control` is returning `"INSTALL"` unconditionally (the `in` check is absent or always true). If `EVPN_REJECT` fires but the step still fails, check that the payload is `""` rather than the key string — leaking the entry key on a reject path is a common mistake.
+- `EVPN_TYPE2_LEARN`: fires when the deterministic `mac|ip|vni` tuple is built for the incoming EVPN type-2 route. If this checkpoint is missing, `evpn_type2_entry` did not produce the expected key.
+- `VNI_MAP_RESOLVE`: fires when the scenario resolves the incoming tuple against the local VNI context. If this checkpoint is missing, the VNI admission path was skipped before the install decision.
+- `EVPN_MAC_IP_INSTALL`: fires when a BGP EVPN MAC/IP entry is installed into the local forwarding table — meaning the incoming VNI was found in `known_vnis` and the entry key was constructed and accepted. If this checkpoint is missing on a route that should be installed, the VNI membership check is returning false. Verify that `known_vnis` is treated as a set of integers and that the VNI argument is an `int` (not a string). Also confirm that `evpn_type2_entry` returns the key as `f"{mac}|{ip}|{vni}"` — a malformed key string will cause the install assertion to fail even after `EVPN_MAC_IP_INSTALL` fires.
 
 ## Failure drills and troubleshooting flow
 

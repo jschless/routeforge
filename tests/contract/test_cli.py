@@ -1,10 +1,13 @@
 import json
+from pathlib import Path
+import subprocess
 
 import pytest
 
 from routeforge.cli import main
 from routeforge.labs.assessment import load_assessment_rubric
 from routeforge.labs.manifest import LABS
+from routeforge.labs.progress import ProgressState, save_progress
 from routeforge.labs.student_checks import StudentCheckFailure, StudentCheckRun
 
 
@@ -191,6 +194,62 @@ def test_check_command_verbose_prints_raw(monkeypatch, capsys) -> None:
     assert "RAW PYTEST OUTPUT" in output
 
 
+def test_check_command_reports_startup_failure(monkeypatch, capsys) -> None:
+    def _fake_run_staged_student_checks(*, stage_max: int, repo_root):  # type: ignore[no-untyped-def]
+        return StudentCheckRun(
+            returncode=1,
+            passed=0,
+            total=0,
+            failures=(),
+            raw_output="Traceback...\nModuleNotFoundError: No module named 'markupsafe'",
+        )
+
+    monkeypatch.setattr("routeforge.cli.run_staged_student_checks", _fake_run_staged_student_checks)
+    assert main(["check", "lab01"]) == 1
+    output = capsys.readouterr().out
+    assert "[FAIL] pytest startup: ModuleNotFoundError: No module named 'markupsafe'" in output
+    assert "staged checks failed before test collection" in output
+
+
+def test_run_staged_student_checks_reads_junit_xml(monkeypatch) -> None:
+    from routeforge.labs import student_checks
+
+    captured: dict[str, object] = {}
+
+    def _fake_run(command, cwd, check, capture_output, env, text):  # type: ignore[no-untyped-def]
+        captured["env"] = env
+        junit_path = Path(command[command.index("--junitxml") + 1])
+        junit_path.write_text(
+            """<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+  <testsuite name="pytest" tests="3" failures="1" errors="0" skipped="0">
+    <testcase classname="tests.student.test_stage_progression" name="test_stage01_edge_mac_and_ipv4_validation" />
+    <testcase classname="tests.student.test_stage_progression" name="test_stage_lab[stage01_lab01_frame_and_headers]">
+      <failure message="AssertionError: expected validation checkpoint" />
+    </testcase>
+    <testcase classname="tests.student.test_stage_progression" name="test_stage02_forwarding_plan_decisions" />
+  </testsuite>
+</testsuites>
+""",
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(command, 1, stdout="raw stdout", stderr="")
+
+    monkeypatch.setattr(student_checks.subprocess, "run", _fake_run)
+    result = student_checks.run_staged_student_checks(stage_max=1, repo_root=Path.cwd())
+
+    assert result.returncode == 1
+    assert result.passed == 2
+    assert result.total == 3
+    assert captured["env"]["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] == "1"
+    assert result.failures == (
+        StudentCheckFailure(
+            "tests/student/test_stage_progression.py::test_stage_lab[stage01_lab01_frame_and_headers]",
+            "expected validation checkpoint",
+        ),
+    )
+
+
 def test_run_command_writes_trace(tmp_path) -> None:
     trace = tmp_path / "trace.jsonl"
     code = main(
@@ -204,6 +263,35 @@ def test_run_command_writes_trace(tmp_path) -> None:
     assert code == 0
     lines = trace.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == 2
+
+
+def test_run_without_state_file_updates_default_progress(capsys) -> None:
+    total_labs = len(LABS)
+
+    assert main(["run", "lab01_frame_and_headers"]) == 0
+    run_out = capsys.readouterr().out
+    assert "progress updated:" in run_out
+
+    assert main(["progress", "show"]) == 0
+    show_out = capsys.readouterr().out
+    assert f"labs.completed: 1/{total_labs}" in show_out
+
+
+def test_progress_show_uses_legacy_local_fallback_when_default_missing(tmp_path, capsys) -> None:
+    legacy_state = ProgressState(
+        version=1,
+        completed=("lab01_frame_and_headers",),
+        run_counts={"lab01_frame_and_headers": 1},
+        pass_counts={"lab01_frame_and_headers": 1},
+        last_result={"lab01_frame_and_headers": "PASS"},
+    )
+    save_progress(legacy_state, tmp_path / ".routeforge_progress.json")
+
+    assert main(["progress", "show"]) == 0
+    output = capsys.readouterr().out
+    assert "warning: using legacy local progress file" in output
+    assert f"progress.file: {tmp_path / '.routeforge_progress.json'}" in output
+    assert "labs.completed: 1/" in output
 
 
 def test_run_command_shows_todo_for_not_implemented(monkeypatch, capsys) -> None:  # type: ignore[no-untyped-def]
@@ -355,3 +443,11 @@ def test_status_command_outputs_position_and_next(tmp_path, capsys) -> None:
     assert "position: lab01_frame_and_headers" in output
     assert "next: lab02_mac_learning_switch" in output
     assert "score:" in output
+
+
+def test_hint_reports_real_test_files(capsys) -> None:
+    assert main(["hint", "lab01_frame_and_headers"]) == 0
+    output = capsys.readouterr().out
+    assert "staged learner gate: tests/student/test_stage_progression.py" in output
+    assert "tests/contract/test_packet_and_interface.py" in output
+    assert "tests/contract/test_src/routeforge/model/packet.py" not in output

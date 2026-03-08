@@ -80,7 +80,7 @@ A lab only counts as completed once `routeforge run` passes and is recorded in y
 
 ## State File
 
-Progress is saved in `~/.routeforge_progress.json` by default, or a custom path with `--state-file`. The state file tracks:
+Progress is saved in `~/.routeforge_progress.json` by default, or a custom path with `--state-file`. If the home-directory file does not exist yet but a legacy local `.routeforge_progress.json` is present in your current working directory, the CLI warns and reuses that legacy file until you migrate it. The state file tracks:
 
 - Which labs are completed
 - Run and pass counts per lab

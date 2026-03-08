@@ -6,7 +6,7 @@
 - Deliver `fhrp_active_initial`: primary router is initially active.
 - Deliver `fhrp_track_failover`: tracked failure triggers failover.
 - Deliver `fhrp_preempt_recover`: primary preempts after recovery.
-- Validate internal behavior through checkpoints: FHRP_ACTIVE, FHRP_FAILOVER.
+- Validate internal behavior through checkpoints: FHRP_ACTIVE_CHANGE, TRACK_DOWN, FHRP_PREEMPT.
 
 ## Prerequisite recap
 
@@ -89,7 +89,7 @@ Expected outcomes:
 - `fhrp_active_initial` should print `[PASS]` (primary router is initially active).
 - `fhrp_track_failover` should print `[PASS]` (tracked failure triggers failover).
 - `fhrp_preempt_recover` should print `[PASS]` (primary preempts after recovery).
-- Run output includes checkpoints: FHRP_ACTIVE, FHRP_FAILOVER.
+- Run output includes checkpoints: FHRP_ACTIVE_CHANGE, TRACK_DOWN, FHRP_PREEMPT.
 
 ## Debug trace checkpoints and interpretation guidance
 
@@ -103,9 +103,9 @@ routeforge debug explain --trace /tmp/lab33_fhrp_tracking_and_failover.jsonl --s
 
 Checkpoint guide:
 
-- `FHRP_ACTIVE`: fires when the tracked object is up and the active router is selected as the current gateway. The function received `tracked_object_up=True` and returned `active_router`. If this checkpoint is missing, check that your function does not unconditionally return `standby_router` and that you are reading the `tracked_object_up` parameter correctly.
-
-- `FHRP_FAILOVER`: fires when the tracked object goes down and the standby router takes over. The function received `tracked_object_up=False` and returned `standby_router`. If this checkpoint is missing, verify that your branch for `False` returns `standby_router` rather than `active_router`, and that you have not swapped the parameter names.
+- `FHRP_ACTIVE_CHANGE`: fires when the active gateway decision is evaluated and the selected active router is returned. If this checkpoint is missing, the failover selection logic is not reaching the active/standby decision point.
+- `TRACK_DOWN`: fires when the tracked object reports a down state. If this checkpoint is missing when `tracked_object_up=False`, verify that your helper returns `"DOWN"` and that the failover path consumes that result.
+- `FHRP_PREEMPT`: fires when the standby router takes over because the tracked object is down. If this checkpoint is missing, verify that the branch for `tracked_object_up=False` returns `standby_router` rather than `active_router`.
 
 ## Failure drills and troubleshooting flow
 

@@ -6,7 +6,7 @@
 - Deliver `ldp_label_alloc`: LDP allocates local label for FEC.
 - Deliver `lfib_program`: LFIB programs outgoing label mapping.
 - Deliver `mpls_swap_forward`: label swap forwarding path executes deterministically.
-- Validate internal behavior through checkpoints: MPLS_LABEL_BIND, MPLS_LFIB_INSTALL.
+- Validate internal behavior through checkpoints: LDP_LABEL_ALLOC, LFIB_PROGRAM, MPLS_SWAP_FORWARD.
 
 ## Prerequisite recap
 
@@ -80,7 +80,7 @@ Expected outcomes:
 - `ldp_label_alloc` should print `[PASS]` (LDP allocates local label for FEC).
 - `lfib_program` should print `[PASS]` (LFIB programs outgoing label mapping).
 - `mpls_swap_forward` should print `[PASS]` (label swap forwarding path executes deterministically).
-- Run output includes checkpoints: MPLS_LABEL_BIND, MPLS_LFIB_INSTALL.
+- Run output includes checkpoints: LDP_LABEL_ALLOC, LFIB_PROGRAM, MPLS_SWAP_FORWARD.
 
 ## Debug trace checkpoints and interpretation guidance
 
@@ -94,9 +94,9 @@ routeforge debug explain --trace /tmp/lab37_mpls_ldp_label_forwarding.jsonl --st
 
 Checkpoint guide:
 
-- `MPLS_LABEL_BIND`: fires when an LDP label binding is installed — meaning a FEC has been successfully mapped to a local label and an outgoing label pair. If this checkpoint is missing, `mpls_ldp_lfib` is not returning the tuple (or is raising before returning), so the binding was never recorded. Check that your function returns `(fec, local_label, outgoing_label)` rather than `None` or a reordered tuple.
-
-- `MPLS_LFIB_INSTALL`: fires when the LFIB entry is confirmed installed and ready for forwarding — the runtime has accepted the binding from `MPLS_LABEL_BIND` and written it into the forwarding table. If `MPLS_LABEL_BIND` fired but `MPLS_LFIB_INSTALL` is absent, the tuple was returned in the wrong field order, causing the install step to reject it. Verify that `lfib_mapping` places fields as `(fec, local_label, outgoing_label)` — swapping local and outgoing will pass type checks but break the install assertion.
+- `LDP_LABEL_ALLOC`: fires when an LDP label binding is allocated for the FEC. If this checkpoint is missing, `mpls_ldp_lfib` is not returning the tuple (or is raising before returning), so the binding was never recorded.
+- `LFIB_PROGRAM`: fires when the LFIB entry is programmed and ready for forwarding. If `LDP_LABEL_ALLOC` fired but `LFIB_PROGRAM` is absent, the tuple was returned in the wrong field order, causing the install step to reject it.
+- `MPLS_SWAP_FORWARD`: fires when the swap-forwarding path completes using the programmed LFIB mapping. If this checkpoint is missing, the label-forwarding step never consumed the installed mapping.
 
 ## Failure drills and troubleshooting flow
 

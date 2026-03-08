@@ -130,8 +130,8 @@ routeforge debug explain --trace /tmp/lab30_qos_policing_and_shaping.jsonl --ste
 
 Checkpoint guide:
 
-- `QOS_POLICE_ADMIT`: Traffic was at or below the CIR and was admitted without loss. The `admitted_kbps` value equals `offered_kbps`. If this checkpoint is missing during the `qos_police_rate` step, your policer may be incorrectly dropping traffic that is within the CIR — check that `min(offered_kbps, cir_kbps)` returns `offered_kbps` when `offered_kbps <= cir_kbps`.
-- `QOS_POLICE_EXCESS`: The offered rate exceeded the CIR and the excess was dropped. `admitted_kbps < offered_kbps`. This checkpoint fires alongside `QOS_POLICE_ADMIT` in the same step when both portions are present. If this checkpoint is missing when you expect excess to be dropped, your policer is not capping at the CIR — check that you use `min()` and not an unconstrained passthrough.
+- `QOS_POLICE`: Traffic was admitted at or below the CIR, with any excess dropped. The returned `admitted_kbps` value should equal `min(offered_kbps, cir_kbps)`. If this checkpoint is missing during the `qos_police_rate` step, your policer is not capping at the CIR correctly.
+- `QOS_SHAPE_QUEUE`: The shaper detected that admitted traffic exceeded the shape rate and queued the excess rather than forwarding it immediately. If this checkpoint is missing during `qos_shape_queue`, verify that the shaping stage recognizes `admitted_kbps > shape_rate_kbps`.
 - `QOS_SHAPE_RELEASE`: The shaper was the binding constraint: `admitted_kbps > shape_rate_kbps`, so `released_kbps = shape_rate_kbps < admitted_kbps`. The difference between admitted and released is held in the shaping queue. If this checkpoint is missing during `qos_shape_release`, your shaper is not applying the `min(admitted, shape_rate)` constraint — verify that the second stage of `qos_police_shape` uses `shape_rate_kbps` as an upper bound on the returned `released` value.
 
 ## Failure drills and troubleshooting flow

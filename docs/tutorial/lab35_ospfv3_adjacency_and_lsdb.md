@@ -6,7 +6,7 @@
 - Deliver `ospfv3_hello_rx`: valid hello advances adjacency.
 - Deliver `ospfv3_neighbor_full`: adjacency reaches FULL state.
 - Deliver `ospfv3_lsa_install`: IPv6 LSA is installed in LSDB.
-- Validate internal behavior through checkpoints: OSPFV3_ADJ_FULL, OSPFV3_ADJ_DOWN, OSPFV3_LSA_INSTALL.
+- Validate internal behavior through checkpoints: OSPFV3_HELLO_RX, OSPFV3_NEIGHBOR_FULL, OSPFV3_LSA_INSTALL.
 
 ## Prerequisite recap
 
@@ -91,7 +91,7 @@ Expected outcomes:
 - `ospfv3_hello_rx` should print `[PASS]` (valid hello advances adjacency).
 - `ospfv3_neighbor_full` should print `[PASS]` (adjacency reaches FULL state).
 - `ospfv3_lsa_install` should print `[PASS]` (IPv6 LSA is installed in LSDB).
-- Run output includes checkpoints: OSPFV3_ADJ_FULL, OSPFV3_ADJ_DOWN, OSPFV3_LSA_INSTALL.
+- Run output includes checkpoints: OSPFV3_HELLO_RX, OSPFV3_NEIGHBOR_FULL, OSPFV3_LSA_INSTALL.
 
 ## Debug trace checkpoints and interpretation guidance
 
@@ -105,11 +105,9 @@ routeforge debug explain --trace /tmp/lab35_ospfv3_adjacency_and_lsdb.jsonl --st
 
 Checkpoint guide:
 
-- `OSPFV3_ADJ_FULL`: fires when the hello handshake succeeds and the adjacency reaches `FULL` state. The function received `hello_ok=True` and returned `"FULL"` as the first tuple element. If this checkpoint is missing, check that your `hello_ok=True` branch returns `"FULL"` and not `"DOWN"`, and that you are not accidentally treating `True` as a falsy value.
-
-- `OSPFV3_ADJ_DOWN`: fires when the hello check fails and the adjacency remains in `DOWN` state. The function received `hello_ok=False` and returned `"DOWN"` along with the unmodified LSDB. If this checkpoint is missing when you send a failing hello, verify that your `hello_ok=False` branch returns the original `lsdb` set without adding `lsa_id`.
-
-- `OSPFV3_LSA_INSTALL`: fires when a new LSA identifier is added to the LSDB as a result of a successful adjacency. This checkpoint fires only alongside `OSPFV3_ADJ_FULL`. If `OSPFV3_ADJ_FULL` fires but `OSPFV3_LSA_INSTALL` does not, confirm that you are returning `lsdb | {lsa_id}` (or an equivalent copy with the new element) rather than returning the original set unmodified.
+- `OSPFV3_HELLO_RX`: fires when the scenario receives the OSPFv3 hello and evaluates whether adjacency can proceed. If this checkpoint is missing, the hello-processing branch is not being executed.
+- `OSPFV3_NEIGHBOR_FULL`: fires when the hello handshake succeeds and the adjacency reaches `FULL` state. The function received `hello_ok=True` and returned `"FULL"` as the first tuple element. If this checkpoint is missing, check that your `hello_ok=True` branch returns `"FULL"` and not `"DOWN"`.
+- `OSPFV3_LSA_INSTALL`: fires when a new LSA identifier is added to the LSDB as a result of a successful adjacency. This checkpoint fires only alongside `OSPFV3_NEIGHBOR_FULL`. If `OSPFV3_NEIGHBOR_FULL` fires but `OSPFV3_LSA_INSTALL` does not, confirm that you are returning `lsdb | {lsa_id}` (or an equivalent copy with the new element) rather than returning the original set unmodified.
 
 ## Failure drills and troubleshooting flow
 
