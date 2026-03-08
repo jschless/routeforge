@@ -49,3 +49,25 @@ def validate_udp(*, length_bytes: int, checksum_valid: bool) -> bool:
     if length_bytes < 8:
         return False
     return checksum_valid
+
+
+def classify_transport_protocol(*, protocol: str) -> str:
+    """Classify a transport protocol as STATEFUL or STATELESS.
+
+    Classification (compare after uppercasing ``protocol``):
+
+    - ``"TCP"`` → ``"STATEFUL"``  — connection-oriented; the OS tracks sequence
+      numbers, window sizes, and teardown state per flow.
+    - ``"UDP"`` → ``"STATELESS"`` — connectionless; each datagram is independent
+      and no session state is maintained.
+    - ``"ICMP"`` → ``"STATELESS"`` — control messages; no transport-layer session.
+    - Any other protocol → ``"STATELESS"`` (safe default).
+
+    This classification determines whether a stateful firewall or NAT device
+    must maintain per-flow state entries for the protocol.
+
+    See ``docs/tutorial/lab16_udp_tcp_fundamentals.md`` for the walkthrough.
+    """
+    if protocol.upper() == "TCP":
+        return "STATEFUL"
+    return "STATELESS"

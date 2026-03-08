@@ -104,6 +104,9 @@ def _build_parser() -> argparse.ArgumentParser:
     report.add_argument("--rubric-file", type=Path, default=None, help="Optional assessment rubric YAML path")
     report.add_argument("--json-out", type=Path, default=None, help="Optional JSON report output path")
 
+    hint = sub.add_parser("hint", help="Show stub contracts and debug pointers for one lab")
+    hint.add_argument("lab_id")
+
     debug = sub.add_parser("debug", help="Replay and explain trace files")
     debug_sub = debug.add_subparsers(dest="debug_command", required=True)
 
@@ -196,6 +199,9 @@ def _cmd_run(lab_id: str, completed_values: list[str], trace_out: Path | None, s
     if unmet:
         unmet_text = ", ".join(unmet)
         print(f"blocked: {lab_id} has unmet prerequisites: {unmet_text}")
+        state_flag = f" --state-file {state_file}" if state_file is not None else ""
+        for prereq in unmet:
+            print(f"  Run: routeforge run {prereq}{state_flag}")
         return 2
 
     if lab_id not in LAB_RUNNERS:
@@ -214,9 +220,16 @@ def _cmd_run(lab_id: str, completed_values: list[str], trace_out: Path | None, s
         print(f"trace written: {trace_out}")
 
     print(f"running lab: {lab_id}")
+    default_trace = Path(f"/tmp/{lab_id}.jsonl")
     for step in result.steps:
         status = "PASS" if step.passed else "FAIL"
         print(f"[{status}] {step.name}: {step.detail}")
+        if not step.passed:
+            fired = ", ".join(step.outcome.checkpoints) if step.outcome.checkpoints else "none"
+            print(f"       checkpoints fired: {fired}")
+            out_path = trace_out if trace_out is not None else default_trace
+            print(f"       Debug: routeforge run {lab_id} --trace-out {out_path}")
+            print(f"              routeforge debug explain --trace {out_path} --step {step.name}")
 
     checkpoints = ", ".join(result.checkpoints) if result.checkpoints else "none"
     print(f"checkpoints: {checkpoints}")
@@ -487,6 +500,29 @@ def _cmd_report(state_file: Path | None, rubric_file: Path | None, json_out: Pat
 
     labs_unlocked = ", ".join(unlocked) if unlocked else "none"
     capstone_ready_text = "yes" if capstone_ready else "no"
+
+    band_explanations = {
+        "DISTINCTION": "score >= 95; excellent mastery",
+        "MERIT": "score >= 85; strong mastery",
+        "PASS": "score >= 70; sufficient to advance",
+        "BELOW_PASS": "score < 70; complete more labs to advance",
+    }
+    band_note = band_explanations.get(assessment.band, "")
+
+    at_risk_detail: list[str] = []
+    for lab_id in assessment.at_risk_labs:
+        lab_result = assessment.lab_results.get(lab_id)
+        if lab_result is not None:
+            at_risk_detail.append(f"{lab_id} (passed {lab_result.pass_count}/{lab_result.run_count} runs)")
+        else:
+            at_risk_detail.append(lab_id)
+
+    next_step = "none"
+    if assessment.at_risk_labs:
+        next_step = f"routeforge check {assessment.at_risk_labs[0]}"
+    elif unlocked:
+        next_step = f"routeforge check {next(iter(unlocked))}"
+
     print(f"report.profile: {matrix.profile}")
     print(f"report.as_of: {matrix.as_of}")
     print(f"labs.completed: {len(completed)}/{len(LABS)}")
@@ -494,9 +530,11 @@ def _cmd_report(state_file: Path | None, rubric_file: Path | None, json_out: Pat
     print(f"conformance.must: {must_covered}/{must_total}")
     print(f"conformance.should: {should_covered}/{should_total}")
     print(f"assessment.score: {assessment.overall_score:.2f}")
-    print(f"assessment.band: {assessment.band}")
-    print(f"assessment.at_risk_labs: {', '.join(assessment.at_risk_labs) if assessment.at_risk_labs else 'none'}")
+    print(f"assessment.band: {assessment.band}  ({band_note})")
+    at_risk_text = ", ".join(at_risk_detail) if at_risk_detail else "none"
+    print(f"assessment.at_risk_labs: {at_risk_text}")
     print(f"assessment.remediation_docs: {', '.join(remediation) if remediation else 'none'}")
+    print(f"assessment.next_step: {next_step}")
     print(f"capstone.ready: {capstone_ready_text}")
 
     if json_out is not None:
@@ -542,6 +580,67 @@ def _cmd_report(state_file: Path | None, rubric_file: Path | None, json_out: Pat
     return 0
 
 
+def _cmd_hint(lab_id: str) -> int:
+    import importlib
+    import inspect
+
+    entry = get_lab(lab_id)
+    if entry is None:
+        print(f"unknown lab: {lab_id}")
+        return 1
+
+    student_target = student_target_for_lab(lab_id)
+    if student_target is None:
+        print(f"no student coding target defined for: {lab_id}")
+        return 0
+
+    doc_path = f"docs/tutorial/{lab_id}.md"
+    print(f"hint for: {lab_id}")
+    print(f"  tutorial:    {doc_path}")
+    print(f"  source file: {student_target.path}")
+    print(f"  symbols:     {', '.join(student_target.symbols)}")
+    print(f"  stage check: routeforge check lab{student_target.stage:02d}")
+    print()
+
+    # Load the module and print each target symbol's signature + docstring
+    module_name = student_target.path.removeprefix("src/").removesuffix(".py").replace("/", ".")
+    try:
+        module = importlib.import_module(module_name)
+        for symbol in student_target.symbols:
+            parts = symbol.split(".")
+            obj: object = module
+            for part in parts:
+                obj = getattr(obj, part, None)
+                if obj is None:
+                    break
+            if obj is None:
+                print(f"  {symbol}: (not found in module)")
+                continue
+            try:
+                sig = inspect.signature(obj)
+                print(f"def {symbol}{sig}:")
+            except Exception:
+                print(f"def {symbol}(...):")
+            doc = inspect.getdoc(obj)
+            if doc:
+                print(f'    """{doc}"""')
+            print()
+    except Exception as exc:
+        print(f"  (could not load module {module_name}: {exc})")
+        print()
+
+    # Point to the contract test file
+    module_short = (
+        student_target.path
+        .removeprefix("src/routeforge/runtime/")
+        .removeprefix("src/routeforge/labs/")
+        .removesuffix(".py")
+    )
+    contract_test = f"tests/contract/test_{module_short}.py"
+    print(f"contract tests: {contract_test}")
+    return 0
+
+
 def _cmd_debug_replay(trace_path: Path) -> int:
     records = load_trace(trace_path)
     for line in replay_lines(records):
@@ -567,6 +666,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_labs()
     if args.command == "show":
         return _cmd_show(args.lab_id)
+    if args.command == "hint":
+        return _cmd_hint(args.lab_id)
     if args.command == "run":
         return _cmd_run(args.lab_id, args.completed, args.trace_out, args.state_file)
     if args.command == "check":

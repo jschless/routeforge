@@ -2,11 +2,11 @@
 
 ## Learning objectives
 
-- Implement `derive_slaac_host_id, ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/phase2.py`.
+- Implement `derive_slaac_host_id, ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/ipv6.py`.
 - Deliver `ipv6_nd_learn`: neighbor discovery entry is learned on trusted RA.
 - Deliver `ipv6_slaac_apply`: SLAAC derives deterministic global address.
 - Deliver `ipv6_ra_guard_drop`: untrusted RA is blocked by RA guard.
-- Validate internal behavior through checkpoints: ND_NEIGHBOR_LEARN, SLAAC_PREFIX_APPLY, RA_GUARD_DROP.
+- Validate internal behavior through checkpoints: ND_RA_TRUSTED, ND_RA_DROP, SLAAC_ADDR_DERIVED.
 
 ## Prerequisite recap
 
@@ -16,13 +16,44 @@
 
 ## Concept walkthrough
 
-IPv6 host onboarding flow with RA trust boundaries. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`derive_slaac_host_id, ipv6_nd_slaac_ra_guard`).
+IPv6 removes the ARP broadcasts of IPv4 and replaces them with Neighbor Discovery Protocol (NDP). One of NDP's most important messages is the Router Advertisement (RA): a router periodically broadcasts an RA containing the network prefix for that link. Hosts use this prefix to configure their own global unicast addresses automatically — a process called Stateless Address Autoconfiguration (SLAAC).
+
+```
+  Router                           Host
+  ------                           ----
+  link-local: fe80::1              link-local: fe80::cafe
+  |                                |
+  |--- Router Advertisement ------>|  prefix: 2001:db8::/64
+  |    (prefix: 2001:db8::/64)     |
+                                   |  derives global address:
+                                   |  2001:db8::cafe
+```
+
+SLAAC address derivation works as follows: take the 64-bit prefix from the RA and append a host identifier derived from the host's link-local address. In this lab the host identifier is the portion of the link-local address after `fe80::` (so `fe80::cafe` yields host ID `cafe`). The resulting global address is `prefix::host_id`.
+
+The security concern is that any device on the link can send a forged RA claiming to be the default router and advertising a malicious prefix. A rogue RA can redirect all host traffic through an attacker's machine.
+
+RA Guard addresses this by configuring switch ports as either trusted (connected to legitimate routers) or untrusted (connected to hosts). Router Advertisements arriving on untrusted ports are silently dropped before they can reach hosts.
+
+```
+  Switch port config:
+  Port Gi0/1 -- TRUSTED   --> Router (allowed to send RAs)
+  Port Gi0/2 -- UNTRUSTED --> Host   (RAs dropped)
+  Port Gi0/3 -- UNTRUSTED --> Host   (RAs dropped)
+```
+
+In this lab `ipv6_nd_slaac_ra_guard` captures both decisions in one function:
+
+- If `ra_trusted` is `False`, return `("DROP", "")`. The RA is discarded and no address is derived.
+- If `ra_trusted` is `True`, derive the SLAAC address by combining the prefix with the host identifier extracted from `source_link_local`, then return `("ALLOW", slaac_address)`.
+
+The helper `derive_slaac_host_id` extracts just the host-identifier portion, defaulting to `"1"` when the link-local address has no meaningful suffix (e.g., `fe80::` alone).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
-- File: `src/routeforge/runtime/phase2.py`
+- File: `src/routeforge/runtime/ipv6.py`
 - Symbols: `derive_slaac_host_id, ipv6_nd_slaac_ra_guard`
 - Why this target: derive deterministic host identifier and enforce RA trust policy.
 - Stage check: `routeforge check lab34`
@@ -38,7 +69,7 @@ Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab34_ipv6_nd_slaac_and_ra_guard`
-3. Edit only `derive_slaac_host_id, ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `derive_slaac_host_id, ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/ipv6.py`.
 4. Run `routeforge check lab34` until it exits with status `0`.
 5. Run `routeforge run lab34_ipv6_nd_slaac_and_ra_guard --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -59,7 +90,7 @@ Expected outcomes:
 - `ipv6_nd_learn` should print `[PASS]` (neighbor discovery entry is learned on trusted RA).
 - `ipv6_slaac_apply` should print `[PASS]` (SLAAC derives deterministic global address).
 - `ipv6_ra_guard_drop` should print `[PASS]` (untrusted RA is blocked by RA guard).
-- Run output includes checkpoints: ND_NEIGHBOR_LEARN, SLAAC_PREFIX_APPLY, RA_GUARD_DROP.
+- Run output includes checkpoints: ND_RA_TRUSTED, ND_RA_DROP, SLAAC_ADDR_DERIVED.
 
 ## Debug trace checkpoints and interpretation guidance
 
@@ -73,13 +104,15 @@ routeforge debug explain --trace /tmp/lab34_ipv6_nd_slaac_and_ra_guard.jsonl --s
 
 Checkpoint guide:
 
-- `ND_NEIGHBOR_LEARN`: first expected pipeline milestone.
-- `SLAAC_PREFIX_APPLY`: second expected pipeline milestone.
-- `RA_GUARD_DROP`: third expected pipeline milestone.
+- `ND_RA_TRUSTED`: fires when a Router Advertisement arrives on a trusted port and is passed through for processing. The function received `ra_trusted=True` and proceeded past the drop check. If this checkpoint is missing when you pass a trusted RA, confirm that your function reads `ra_trusted` rather than hardcoding `False`, and that `"ALLOW"` is returned rather than `"DROP"`.
+
+- `ND_RA_DROP`: fires when a Router Advertisement is silently dropped because the source port is untrusted. The function received `ra_trusted=False` and returned `("DROP", "")` immediately without deriving any address. If this checkpoint is missing when you send an untrusted RA, check that your early-return path for `ra_trusted=False` is reached before address derivation logic.
+
+- `SLAAC_ADDR_DERIVED`: fires when a global unicast address is successfully built from the RA prefix and the host identifier. The returned string should be in the form `prefix::host_id`. If this checkpoint fires but the address value is wrong, trace through `derive_slaac_host_id` to verify the split on `fe80::` and the default of `"1"` for empty suffixes.
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `derive_slaac_host_id` or `ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab34` to confirm tests catch regressions.
+- Intentionally break `derive_slaac_host_id` or `ipv6_nd_slaac_ra_guard` in `src/routeforge/runtime/ipv6.py` and rerun `routeforge check lab34` to confirm tests catch regressions.
 - If `routeforge run lab34_ipv6_nd_slaac_and_ra_guard --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.

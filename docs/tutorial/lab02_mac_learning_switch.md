@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `DataplaneSim._select_known_unicast_egress` in `src/routeforge/runtime/dataplane_sim.py`.
+- Implement `DataplaneSim._determine_forwarding_plan` in `src/routeforge/runtime/dataplane_sim.py`.
 - Deliver `unknown_unicast_flood`: unknown unicast floods to all non-ingress ports.
 - Deliver `known_unicast_forward`: MAC learning enables deterministic unicast forwarding.
 - Validate internal behavior through checkpoints: PARSE_OK, VLAN_CLASSIFY, MAC_LEARN, L2_FLOOD, L2_UNICAST_FORWARD.
@@ -51,16 +51,24 @@ If the FDB lookup returns the same port the frame arrived on, the destination is
 - Second frame after both hosts have sent → `action="FORWARD"`, `reason="L2_FDB_HIT"`, only the destination port in egress.
 - Frame whose destination equals the ingress port → `action="DROP"`, `reason="L2_SAME_PORT_DESTINATION"`.
 
-Student-mode coding target for this stage is `src/routeforge/runtime/dataplane_sim.py` (`DataplaneSim._select_known_unicast_egress`).
+Student-mode coding target for this stage is `src/routeforge/runtime/dataplane_sim.py` (`DataplaneSim._determine_forwarding_plan`).
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/dataplane_sim.py`
-- Symbols: `DataplaneSim._select_known_unicast_egress`
-- Why this target: Select deterministic egress for known unicast frames.
+- Symbols: `DataplaneSim._determine_forwarding_plan`
+- Why this target: Build the core forwarding decision pipeline (broadcast, unknown unicast, known unicast, same-port drop).
 - Stage check: `routeforge check lab02`
+
+Function contract for this stage:
+
+- Symbol: `DataplaneSim._determine_forwarding_plan(self, *, ingress_interface: str, ingress_vlan: int, destination_mac: str) -> ForwardingPlan`
+- Required `ForwardingPlan.action` values: `FLOOD`, `FORWARD`, `DROP`
+- Required `ForwardingPlan.reason` values: `L2_BROADCAST_FLOOD`, `L2_UNKNOWN_UNICAST_FLOOD`, `L2_FDB_HIT`, `L2_SAME_PORT_DESTINATION`
+- Required `ForwardingPlan.checkpoint` values: `L2_FLOOD`, `L2_UNICAST_FORWARD`, `PARSE_DROP`
+- Required edge case: destination learned on ingress interface must return `DROP` with `L2_SAME_PORT_DESTINATION`
 
 Suggested student walkthrough:
 

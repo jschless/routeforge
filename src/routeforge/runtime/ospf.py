@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import heapq
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network
-import heapq
 
 
 def neighbor_hello_transition(
@@ -13,6 +13,23 @@ def neighbor_hello_transition(
     hello_received: bool,
     dead_timer_expired: bool,
 ) -> str:
+    """Return the next OSPF neighbor state given current state and inputs.
+
+    Full FSM used in this implementation (DOWN / INIT / 2WAY / FULL):
+
+    - ``dead_timer_expired=True`` → always transition to ``"DOWN"``,
+      regardless of current state or hello.
+    - ``hello_received=True`` and ``dead_timer_expired=False`` → transition
+      progresses: DOWN→INIT, INIT→2WAY, 2WAY→FULL; FULL stays FULL.
+    - Both False → stay in ``current_state``.
+
+    Valid states: ``"DOWN"``, ``"INIT"``, ``"2WAY"``, ``"FULL"``.
+
+    Note: the simplified student model uses only DOWN/FULL; this implementation
+    uses the full four-state progression.
+
+    See ``docs/tutorial/lab11_ospf_adjacency_fsm.md`` for the full FSM walkthrough.
+    """
     if dead_timer_expired:
         return "DOWN"
     if not hello_received:
@@ -50,6 +67,13 @@ def elect_dr_bdr(candidates: list[DrCandidate]) -> tuple[str, str | None]:
 
 
 def failover_dr_bdr(candidates: list[DrCandidate], *, active_router_ids: set[str]) -> tuple[str, str | None]:
+    """Re-elect DR/BDR from candidates that are currently active.
+
+    Filter ``candidates`` to only those whose ``router_id`` is in
+    ``active_router_ids``, then call ``elect_dr_bdr`` on the filtered list.
+
+    Raises ``ValueError`` if no candidates remain after filtering.
+    """
     active = [candidate for candidate in candidates if candidate.router_id in active_router_ids]
     return elect_dr_bdr(active)
 
@@ -114,28 +138,106 @@ class SpfResult:
     parent_by_router: dict[str, str | None]
 
 
+def _dijkstra_init(
+    graph: dict[str, list[tuple[str, int]]],
+    *,
+    root_router_id: str,
+) -> tuple[dict[str, int], dict[str, str | None]]:
+    """Initialize Dijkstra cost and parent tables for SPF.
+
+    Sets up the two data structures needed before the main heap loop:
+
+    - ``cost_by_router``: maps every router_id in ``graph`` to its current
+      best-known cost.  Root starts at ``0``; all others start at
+      ``float("inf")`` (unknown/unreachable).
+    - ``parent_by_router``: maps ``root_router_id`` to ``None`` (it has no
+      parent).  Other routers are not yet added — they are inserted when
+      relaxed in the heap loop.
+
+    Return ``(cost_by_router, parent_by_router)``.
+
+    See ``docs/tutorial/lab14_ospf_spf_and_route_install.md`` for the walkthrough.
+    """
+    cost_by_router: dict[str, int] = {root_router_id: 0}
+    parent_by_router: dict[str, str | None] = {root_router_id: None}
+    return cost_by_router, parent_by_router
+
+
+def _dijkstra_relax(
+    current: str,
+    neighbors: list[tuple[str, int]],
+    *,
+    cost_by_router: dict[str, int],
+    parent_by_router: dict[str, str | None],
+) -> list[tuple[int, str]]:
+    """Relax all edges from ``current`` and return new heap entries.
+
+    For each ``(neighbor, link_cost)`` in ``neighbors``:
+    - Compute ``candidate = cost_by_router[current] + link_cost``.
+    - If ``candidate < cost_by_router.get(neighbor, float("inf"))``:
+      - Update ``cost_by_router[neighbor] = candidate``.
+      - Set ``parent_by_router[neighbor] = current``.
+      - Append ``(candidate, neighbor)`` to the returned list.
+    - Equal-cost paths: do **not** update (strict ``<`` only); the first path
+      found via the heap wins.  For determinism, the heap naturally processes
+      cheaper costs first; tie-break on ``router_id`` string is handled by the
+      heap tuple ordering ``(cost, router_id)``.
+
+    Return a list of ``(cost, router_id)`` tuples to push onto the heap.
+    Modifies ``cost_by_router`` and ``parent_by_router`` in place.
+
+    See ``docs/tutorial/lab14_ospf_spf_and_route_install.md`` for the walkthrough.
+    """
+    new_entries: list[tuple[int, str]] = []
+    current_cost = cost_by_router[current]
+    for neighbor, edge_cost in neighbors:
+        candidate = current_cost + edge_cost
+        known = cost_by_router.get(neighbor, float("inf"))  # type: ignore[arg-type]
+        if candidate < known:
+            cost_by_router[neighbor] = candidate
+            parent_by_router[neighbor] = current
+            new_entries.append((candidate, neighbor))
+    return new_entries
+
+
 def run_spf(graph: dict[str, list[tuple[str, int]]], *, root_router_id: str) -> SpfResult:
-    costs: dict[str, int] = {root_router_id: 0}
-    parent: dict[str, str | None] = {root_router_id: None}
-    pq: list[tuple[int, str]] = [(0, root_router_id)]
+    """Run Dijkstra's SPF from ``root_router_id`` over ``graph``.
+
+    This function is pre-filled as a scaffold — implement ``_dijkstra_init``
+    and ``_dijkstra_relax`` above, and this will produce the correct
+    ``SpfResult``.
+
+    ``graph`` maps each router_id to a list of ``(neighbor_router_id, link_cost)``
+    adjacencies.  The heap tuple is ``(cost, router_id)`` so Python's
+    ``heapq`` breaks cost ties by router_id string (lexicographically smaller
+    wins), satisfying the determinism requirement.
+
+    See ``docs/tutorial/lab14_ospf_spf_and_route_install.md`` for the walkthrough.
+    """
+    cost_by_router, parent_by_router = _dijkstra_init(graph, root_router_id=root_router_id)
+    heap: list[tuple[int, str]] = [(0, root_router_id)]
     visited: set[str] = set()
 
-    while pq:
-        current_cost, node = heapq.heappop(pq)
-        if node in visited:
+    while heap:
+        _cost, router_id = heapq.heappop(heap)
+        if router_id in visited:
             continue
-        visited.add(node)
-        for neighbor, edge_cost in sorted(graph.get(node, []), key=lambda entry: entry[0]):
-            candidate_cost = current_cost + edge_cost
-            known = costs.get(neighbor)
-            if known is None or candidate_cost < known:
-                costs[neighbor] = candidate_cost
-                parent[neighbor] = node
-                heapq.heappush(pq, (candidate_cost, neighbor))
-            elif candidate_cost == known and node < (parent.get(neighbor) or "~"):
-                parent[neighbor] = node
+        visited.add(router_id)
+        neighbors = graph.get(router_id, [])
+        new_entries = _dijkstra_relax(
+            router_id, neighbors,
+            cost_by_router=cost_by_router,
+            parent_by_router=parent_by_router,
+        )
+        for entry in new_entries:
+            heapq.heappush(heap, entry)
 
-    return SpfResult(root_router_id=root_router_id, cost_by_router=costs, parent_by_router=parent)
+    reachable_costs = {k: v for k, v in cost_by_router.items() if v < float("inf")}
+    return SpfResult(
+        root_router_id=root_router_id,
+        cost_by_router=reachable_costs,
+        parent_by_router=parent_by_router,
+    )
 
 
 def next_hop_for_destination(spf: SpfResult, *, destination_router_id: str) -> str | None:

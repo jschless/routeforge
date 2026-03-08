@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `ArpAdjacencyTable.resolve` in `src/routeforge/runtime/adjacency.py`.
+- Implement `ArpAdjacencyTable.queue_packet, ArpAdjacencyTable.resolve` in `src/routeforge/runtime/adjacency.py`.
 - Deliver `arp_request_and_queue`: ARP miss queues packet and emits request.
 - Deliver `arp_reply_and_cache_update`: ARP reply installs cache entry and releases pending packets.
 - Validate internal behavior through checkpoints: ARP_REQUEST_TX, ARP_REPLY_RX, ARP_CACHE_UPDATE.
@@ -51,9 +51,16 @@ Student-mode coding target for this stage is `src/routeforge/runtime/adjacency.p
 Primary target for this stage:
 
 - File: `src/routeforge/runtime/adjacency.py`
-- Symbols: `ArpAdjacencyTable.resolve`
-- Why this target: Resolve ARP entries and release queued packets.
+- Symbols: `ArpAdjacencyTable.queue_packet, ArpAdjacencyTable.resolve`
+- Why this target: Implement both sides of ARP miss handling: queue-on-miss and release-on-resolve.
 - Stage check: `routeforge check lab06`
+
+Function contract for this stage:
+
+- Symbol: `ArpAdjacencyTable.queue_packet(self, *, next_hop_ip: str, packet_id: str) -> bool`
+- Required behavior: append packet to per-next-hop queue, return `True` only for first unresolved packet
+- Symbol: `ArpAdjacencyTable.resolve(self, *, next_hop_ip: str, mac: str) -> list[str]`
+- Required behavior: install cache entry and return all queued packets for that next hop in order
 
 Suggested student walkthrough:
 
