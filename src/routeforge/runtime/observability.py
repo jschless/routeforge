@@ -17,5 +17,45 @@ def readiness_check(*, checks: dict[str, bool]) -> ReadinessResult:
 
 
 def emit_telemetry(*, component: str, counters: dict[str, int], timestamp_s: int) -> dict[str, object]:
-    # TODO(student): emit telemetry with deterministically ordered counters.
+    """Emit a telemetry snapshot with deterministically ordered counters.
+
+    Return a dict with keys:
+
+    - ``"component"``: the ``component`` string unchanged.
+    - ``"timestamp_s"``: the ``timestamp_s`` integer unchanged.
+    - ``"counters"``: a new dict with the same counter key-value pairs as
+      ``counters``, but sorted by counter name (ascending alphabetical order).
+
+    Deterministic ordering ensures that two calls with the same counters in
+    different insertion order produce identical output.
+
+    See ``docs/tutorial/lab26_observability_and_ops.md`` for the walkthrough.
+
+    # TODO(student): implement emit_telemetry.
+    """
     raise NotImplementedError("TODO: implement emit_telemetry")
+
+
+def diff_telemetry_snapshots(
+    *, before: dict[str, int], after: dict[str, int]
+) -> dict[str, int]:
+    """Compute the counter delta between two telemetry snapshots.
+
+    For every counter key that appears in either ``before`` or ``after``:
+
+    - ``delta = after.get(key, 0) - before.get(key, 0)``
+    - Include the key in the result **only if** ``delta != 0``.
+
+    Examples:
+    - Counter increases: ``before={"rx": 10}``, ``after={"rx": 15}`` → ``{"rx": 5}``
+    - Counter disappears: ``before={"rx": 10}``, ``after={}`` → ``{"rx": -10}``
+    - Counter appears: ``before={}``, ``after={"rx": 5}`` → ``{"rx": 5}``
+    - No change: ``before={"rx": 10}``, ``after={"rx": 10}`` → ``{}``
+
+    Return the result sorted by counter name (ascending alphabetical).
+
+    See ``docs/tutorial/lab26_observability_and_ops.md`` for the walkthrough.
+
+    # TODO(student): implement diff_telemetry_snapshots.
+    """
+    raise NotImplementedError("TODO: implement diff_telemetry_snapshots")

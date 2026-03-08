@@ -124,35 +124,101 @@ class SpfResult:
     parent_by_router: dict[str, str | None]
 
 
-def run_spf(graph: dict[str, list[tuple[str, int]]], *, root_router_id: str) -> SpfResult:
-    """Run Dijkstra's SPF from ``root_router_id`` over ``graph``.
+def _dijkstra_init(
+    graph: dict[str, list[tuple[str, int]]],
+    *,
+    root_router_id: str,
+) -> tuple[dict[str, int], dict[str, str | None]]:
+    """Initialize Dijkstra cost and parent tables for SPF.
 
-    ``graph`` maps each router_id to a list of ``(neighbor_router_id, link_cost)``
-    tuples representing adjacencies.
+    Sets up the two data structures needed before the main heap loop:
 
-    Algorithm:
-    1. Initialize: cost[root] = 0, cost[all others] = infinity.
-       Set parent[root] = None.
-    2. Use a min-heap of ``(cost, router_id)`` to process nodes in cost order.
-    3. For each node popped from the heap, relax its neighbors:
-       if cost[node] + link_cost < cost[neighbor], update cost[neighbor] and
-       set parent[neighbor] = node, then push (new_cost, neighbor) to the heap.
-    4. For determinism, when two paths have equal cost, prefer the neighbor
-       with the **lexicographically smaller** router_id (i.e., compare IDs as
-       strings when costs are equal).
-    5. Continue until the heap is empty.
+    - ``cost_by_router``: maps every router_id in ``graph`` to its current
+      best-known cost.  Root starts at ``0``; all others start at
+      ``float("inf")`` (unknown/unreachable).
+    - ``parent_by_router``: maps ``root_router_id`` to ``None`` (it has no
+      parent).  Other routers are not yet added — they are inserted when
+      relaxed in the heap loop.
 
-    Return a ``SpfResult`` with:
-    - ``root_router_id``: the starting router (unchanged from input)
-    - ``cost_by_router``: ``{router_id: minimum_cost}`` for all reachable routers
-    - ``parent_by_router``: ``{router_id: parent_router_id | None}``
-      (root's parent is None; unreachable nodes are omitted)
+    Return ``(cost_by_router, parent_by_router)``.
 
     See ``docs/tutorial/lab14_ospf_spf_and_route_install.md`` for the walkthrough.
 
-    # TODO(student): implement run_spf using Dijkstra's algorithm above.
+    # TODO(student): implement _dijkstra_init.
     """
-    raise NotImplementedError("TODO: implement run_spf")
+    raise NotImplementedError("TODO: implement _dijkstra_init")
+
+
+def _dijkstra_relax(
+    current: str,
+    neighbors: list[tuple[str, int]],
+    *,
+    cost_by_router: dict[str, int],
+    parent_by_router: dict[str, str | None],
+) -> list[tuple[int, str]]:
+    """Relax all edges from ``current`` and return new heap entries.
+
+    For each ``(neighbor, link_cost)`` in ``neighbors``:
+    - Compute ``candidate = cost_by_router[current] + link_cost``.
+    - If ``candidate < cost_by_router.get(neighbor, float("inf"))``:
+      - Update ``cost_by_router[neighbor] = candidate``.
+      - Set ``parent_by_router[neighbor] = current``.
+      - Append ``(candidate, neighbor)`` to the returned list.
+    - Equal-cost paths: do **not** update (strict ``<`` only); the first path
+      found via the heap wins.  For determinism, the heap naturally processes
+      cheaper costs first; tie-break on ``router_id`` string is handled by the
+      heap tuple ordering ``(cost, router_id)``.
+
+    Return a list of ``(cost, router_id)`` tuples to push onto the heap.
+    Modifies ``cost_by_router`` and ``parent_by_router`` in place.
+
+    See ``docs/tutorial/lab14_ospf_spf_and_route_install.md`` for the walkthrough.
+
+    # TODO(student): implement _dijkstra_relax.
+    """
+    raise NotImplementedError("TODO: implement _dijkstra_relax")
+
+
+def run_spf(graph: dict[str, list[tuple[str, int]]], *, root_router_id: str) -> SpfResult:
+    """Run Dijkstra's SPF from ``root_router_id`` over ``graph``.
+
+    This function is pre-filled as a scaffold — implement ``_dijkstra_init``
+    and ``_dijkstra_relax`` above, and this will produce the correct
+    ``SpfResult``.
+
+    ``graph`` maps each router_id to a list of ``(neighbor_router_id, link_cost)``
+    adjacencies.  The heap tuple is ``(cost, router_id)`` so Python's
+    ``heapq`` breaks cost ties by router_id string (lexicographically smaller
+    wins), satisfying the determinism requirement.
+
+    See ``docs/tutorial/lab14_ospf_spf_and_route_install.md`` for the walkthrough.
+    """
+    import heapq
+
+    cost_by_router, parent_by_router = _dijkstra_init(graph, root_router_id=root_router_id)
+    heap: list[tuple[int, str]] = [(0, root_router_id)]
+    visited: set[str] = set()
+
+    while heap:
+        _cost, router_id = heapq.heappop(heap)
+        if router_id in visited:
+            continue
+        visited.add(router_id)
+        neighbors = graph.get(router_id, [])
+        new_entries = _dijkstra_relax(
+            router_id, neighbors,
+            cost_by_router=cost_by_router,
+            parent_by_router=parent_by_router,
+        )
+        for entry in new_entries:
+            heapq.heappush(heap, entry)
+
+    reachable_costs = {k: v for k, v in cost_by_router.items() if v < float("inf")}
+    return SpfResult(
+        root_router_id=root_router_id,
+        cost_by_router=reachable_costs,
+        parent_by_router=parent_by_router,
+    )
 
 
 def next_hop_for_destination(spf: SpfResult, *, destination_router_id: str) -> str | None:

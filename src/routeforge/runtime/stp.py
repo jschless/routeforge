@@ -56,42 +56,134 @@ def _neighbor(endpoint: PortRef, link: Link) -> PortRef:
     raise ValueError("endpoint not in link")
 
 
-def compute_stp(bridges: list[Bridge], links: list[Link]) -> STPResult:
-    """Compute deterministic STP root, root path costs, and port roles.
+def _elect_root_bridge(bridges: list[Bridge]) -> Bridge:
+    """Return the bridge with the lowest BridgeID.
 
-    Algorithm (IEEE 802.1D simplified):
+    ``BridgeID`` is a dataclass with ``order=True``, so Python compares
+    ``(priority, mac)`` field by field — lower priority wins; on a tie,
+    lower MAC string wins (lexicographic).
 
-    1. **Elect root bridge** — the bridge with the lowest ``BridgeID``
-       (compare ``(priority, mac)`` lexicographically; lower wins).
+    Example: ``BridgeID(priority=4096, mac="ff:ff:ff:ff:ff:ff")`` beats
+    ``BridgeID(priority=32768, mac="00:00:00:00:00:01")`` because 4096 < 32768.
 
-    2. **Compute root path costs** — BFS/Dijkstra from the root across all
-       links.  Each link has a ``cost`` field; accumulate costs to find the
-       minimum-cost path from every bridge to the root.
-
-    3. **Assign root ports** — for every non-root bridge, the port on the
-       lowest-cost path toward the root is the *root port*.  Tiebreak on
-       port_id lexicographically (lower port_id wins).
-
-    4. **Assign designated ports** — for each link segment, one port is
-       *designated* (the end closer to the root, i.e., lower root path cost
-       from that bridge's side).  Tiebreak: lower ``bridge_id``, then lower
-       ``port_id``.
-
-    5. **Block remaining ports** — any port not elected as root or designated
-       becomes *alternate* (blocked).
-
-    Return a ``STPResult`` with:
-    - ``root_node_id``: node_id of the elected root bridge
-    - ``root_path_cost``: mapping ``node_id -> cost`` to reach root (root=0)
-    - ``root_port_by_node``: mapping ``node_id -> port_id`` for non-root bridges
-    - ``port_roles``: mapping ``(node_id, port_id) -> role`` where role is one
-      of ``"ROOT"``, ``"DESIGNATED"``, or ``"ALTERNATE"``
+    Use ``min(bridges, key=...)`` — ``Bridge.bridge_id`` is the sort key.
 
     See ``docs/tutorial/lab04_stp.md`` for the concept walkthrough.
 
-    # TODO(student): implement compute_stp following the algorithm above.
+    # TODO(student): implement _elect_root_bridge.
     """
-    raise NotImplementedError("TODO: implement compute_stp")
+    raise NotImplementedError("TODO: implement _elect_root_bridge")
+
+
+def _compute_root_path_costs(
+    root: Bridge, bridges: list[Bridge], links: list[Link]
+) -> dict[str, int]:
+    """BFS/Dijkstra from root to compute minimum cost from every bridge to root.
+
+    Algorithm:
+    1. Initialize: ``cost = {root.node_id: 0}``; all others not present (treat
+       as infinity).
+    2. Use a min-heap of ``(cost, node_id)``; start with ``(0, root.node_id)``.
+    3. Pop the cheapest entry.  For each link touching that node, check the
+       neighbor's known cost.  If ``cost[current] + link.cost`` is lower, update
+       and push ``(new_cost, neighbor_node_id)``.
+    4. Use ``_neighbor(endpoint, link)`` to find the other end of a link.
+       To find links for a node, iterate ``links`` and check ``link.a.node_id``
+       and ``link.b.node_id``.
+
+    Return ``{node_id: minimum_cost_to_root}`` for all reachable bridges.
+
+    See ``docs/tutorial/lab04_stp.md`` for the concept walkthrough.
+
+    # TODO(student): implement _compute_root_path_costs.
+    """
+    raise NotImplementedError("TODO: implement _compute_root_path_costs")
+
+
+def _compute_root_ports(
+    root: Bridge,
+    bridges: list[Bridge],
+    links: list[Link],
+    root_path_cost: dict[str, int],
+) -> dict[str, str]:
+    """Determine the root port for every non-root bridge.
+
+    The root port is the port on the lowest-cost path toward the root.
+    Tiebreak: lower ``port_id`` string (lexicographic) wins.
+
+    Algorithm:
+    - For each non-root bridge, iterate its links.
+    - For each link, compute candidate path cost:
+      ``root_path_cost[neighbor_node_id] + link.cost``.
+    - The port (``a`` or ``b`` side) on the local bridge side of the best link
+      is the root port.
+    - Ignore links to unreachable neighbors (not in ``root_path_cost``).
+
+    Return ``{node_id: port_id}`` for non-root bridges only.
+
+    See ``docs/tutorial/lab04_stp.md`` for the concept walkthrough.
+
+    # TODO(student): implement _compute_root_ports.
+    """
+    raise NotImplementedError("TODO: implement _compute_root_ports")
+
+
+def _assign_port_roles(
+    root: Bridge,
+    bridges: list[Bridge],
+    links: list[Link],
+    root_path_cost: dict[str, int],
+    root_port_by_node: dict[str, str],
+) -> dict[tuple[str, str], str]:
+    """Assign DESIGNATED, ROOT, or ALTERNATE role to every port.
+
+    Rules (apply in order):
+
+    1. Root bridge ports are always ``"DESIGNATED"``.
+    2. For every non-root bridge, the root port (from ``root_port_by_node``) is
+       ``"ROOT"``.
+    3. For each link segment, the designated port is on the bridge with the
+       **lower** root path cost.  Tiebreak: lower ``bridge_id`` (compare
+       ``Bridge.bridge_id``), then lower ``port_id`` string.
+       The designated port gets role ``"DESIGNATED"``; the other is
+       ``"ALTERNATE"``.
+
+    Use ``_neighbor(endpoint, link)`` to find the far end of a link.
+    Look up the bridge object by ``node_id`` to access its ``bridge_id``.
+
+    Return ``{(node_id, port_id): role}`` covering all ports of all bridges.
+
+    See ``docs/tutorial/lab04_stp.md`` for the concept walkthrough.
+
+    # TODO(student): implement _assign_port_roles.
+    """
+    raise NotImplementedError("TODO: implement _assign_port_roles")
+
+
+def compute_stp(bridges: list[Bridge], links: list[Link]) -> STPResult:
+    """Compute deterministic STP root, root path costs, and port roles.
+
+    This function is pre-filled as a scaffold — implement the four helper
+    functions above and this will produce the correct ``STPResult``.
+
+    The algorithm (IEEE 802.1D simplified) is broken into steps:
+    1. ``_elect_root_bridge`` — lowest BridgeID wins.
+    2. ``_compute_root_path_costs`` — Dijkstra from root.
+    3. ``_compute_root_ports`` — best port toward root per non-root bridge.
+    4. ``_assign_port_roles`` — DESIGNATED / ROOT / ALTERNATE per port.
+
+    See ``docs/tutorial/lab04_stp.md`` for the full concept walkthrough.
+    """
+    root = _elect_root_bridge(bridges)
+    root_path_cost = _compute_root_path_costs(root, bridges, links)
+    root_port_by_node = _compute_root_ports(root, bridges, links, root_path_cost)
+    port_roles = _assign_port_roles(root, bridges, links, root_path_cost, root_port_by_node)
+    return STPResult(
+        root_node_id=root.node_id,
+        root_path_cost=root_path_cost,
+        root_port_by_node=root_port_by_node,
+        port_roles=port_roles,
+    )
 
 
 def remove_link(links: list[Link], *, a: tuple[str, str], b: tuple[str, str]) -> list[Link]:

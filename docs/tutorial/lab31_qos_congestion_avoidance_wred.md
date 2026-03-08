@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `wred_decision_profile, qos_wred_decision` in `src/routeforge/runtime/phase2.py`.
+- Implement `wred_decision_profile, qos_wred_decision` in `src/routeforge/runtime/qos_advanced.py`.
 - Deliver `qos_wred_profile`: WRED profile activates above minimum threshold.
 - Deliver `qos_ecn_mark`: ECN-capable flow is marked before hard drop.
 - Deliver `qos_wred_drop`: queue beyond max threshold is dropped.
@@ -16,13 +16,64 @@
 
 ## Concept walkthrough
 
-Congestion avoidance with deterministic threshold actions. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`wred_decision_profile, qos_wred_decision`).
+### The problem: tail-drop and global synchronization
+
+The naive approach to a full queue is tail-drop: when the queue is full, every new arriving packet is dropped. This causes a phenomenon called TCP global synchronization. Because many TCP flows share the queue and all see packet loss at the same moment, they all simultaneously enter congestion-control slow-start, cutting their windows at the same time. This drains the queue to near-empty, then all flows ramp up together and fill it again, repeating in waves. The result is highly inefficient, oscillating link utilization.
+
+Weighted Random Early Detection (WRED) solves this by proactively signaling congestion to individual flows before the queue is completely full, staggering their slowdowns rather than triggering them all at once.
+
+### Key terms
+
+- **Min threshold**: The queue depth below which WRED takes no action. All traffic is forwarded normally when the queue is this shallow.
+- **Max threshold**: The queue depth at or above which WRED drops all arriving traffic unconditionally, regardless of ECN capability.
+- **Between thresholds**: The active WRED zone. Traffic here may be dropped or marked depending on ECN capability. In this simplified model all traffic in this zone is acted on (rather than the probabilistic approach used in real hardware).
+- **ECN (Explicit Congestion Notification)**: A mechanism that allows a router to signal congestion to a sender without dropping packets. When an ECN-capable endpoint sends a packet with the ECN-capable transport (ECT) bit set, a congested router can set the Congestion Experienced (CE) bit instead of dropping the packet. The receiver notifies the sender, which reduces its transmission rate. ECN avoids the retransmission overhead of packet loss.
+- **ECN marking vs. dropping**: In the between-thresholds zone, ECN-capable flows are marked (MARK) rather than dropped; the sender receives a congestion signal without losing the packet. Non-ECN flows cannot be marked, so they are dropped (DROP) to produce the same congestion signal via loss detection.
+
+### Threshold diagram
+
+```
+Queue depth
+    │
+    │  ≥ max_threshold  ──────────  DROP everything (hard limit)
+    │
+    │  between           ──────────  ECN-capable → MARK
+    │  thresholds                    non-ECN     → DROP
+    │
+    │  < min_threshold  ──────────  FORWARD (no congestion action)
+    │
+    0
+```
+
+### The two-function design
+
+`wred_decision_profile` classifies the current queue depth into one of three regions: `BELOW_MIN`, `BETWEEN_THRESHOLDS`, or `AT_OR_ABOVE_MAX`. This is a pure classification step with no policy logic.
+
+`qos_wred_decision` calls `wred_decision_profile` and maps the result to a final action:
+
+| Profile | ECN capable | Action |
+|---|---|---|
+| BELOW_MIN | any | FORWARD |
+| BETWEEN_THRESHOLDS | True | MARK |
+| BETWEEN_THRESHOLDS | False | DROP |
+| AT_OR_ABOVE_MAX | any | DROP |
+
+The key subtlety: `AT_OR_ABOVE_MAX` always produces DROP, even for ECN-capable flows. Once the queue is at maximum capacity, the system cannot afford to merely mark — it must drop to free space immediately.
+
+### What correct behavior looks like
+
+Given `min_threshold=20`, `max_threshold=40`:
+- `queue_depth=10` → `FORWARD` (below min, no action regardless of ECN)
+- `queue_depth=30, ecn_capable=True` → `MARK` (between thresholds, ECN available)
+- `queue_depth=30, ecn_capable=False` → `DROP` (between thresholds, no ECN)
+- `queue_depth=40, ecn_capable=True` → `DROP` (at max, ECN irrelevant)
+- `queue_depth=55, ecn_capable=True` → `DROP` (above max, ECN irrelevant)
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
-- File: `src/routeforge/runtime/phase2.py`
+- File: `src/routeforge/runtime/qos_advanced.py`
 - Symbols: `wred_decision_profile, qos_wred_decision`
 - Why this target: classify queue-depth thresholds first, then resolve FORWARD/MARK/DROP action.
 - Stage check: `routeforge check lab31`
@@ -38,7 +89,7 @@ Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab31_qos_congestion_avoidance_wred`
-3. Edit only `wred_decision_profile, qos_wred_decision` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `wred_decision_profile, qos_wred_decision` in `src/routeforge/runtime/qos_advanced.py`.
 4. Run `routeforge check lab31` until it exits with status `0`.
 5. Run `routeforge run lab31_qos_congestion_avoidance_wred --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -73,13 +124,13 @@ routeforge debug explain --trace /tmp/lab31_qos_congestion_avoidance_wred.jsonl 
 
 Checkpoint guide:
 
-- `QOS_WRED_PROFILE`: first expected pipeline milestone.
-- `QOS_ECN_MARK`: second expected pipeline milestone.
-- `QOS_WRED_DROP`: third expected pipeline milestone.
+- `WRED_FORWARD`: The queue depth was below `min_threshold`. No congestion action was taken and the packet is forwarded normally. This checkpoint fires regardless of ECN capability — ECN state is irrelevant below the minimum threshold. If this checkpoint is missing when `queue_depth < min_threshold`, your `wred_decision_profile` is misclassifying the queue depth or your `qos_wred_decision` is not returning `"FORWARD"` for the `BELOW_MIN` profile.
+- `WRED_MARK`: The queue depth was between `min_threshold` and `max_threshold` (exclusive), and the flow was ECN-capable. The packet's CE bit was set rather than dropping it, signaling congestion without loss. If this checkpoint is missing during `qos_ecn_mark`, check two things: first, that `wred_decision_profile` returns `BETWEEN_THRESHOLDS` for this depth; second, that `qos_wred_decision` returns `"MARK"` (not `"DROP"`) when the profile is `BETWEEN_THRESHOLDS` and `ecn_capable=True`.
+- `WRED_DROP`: A packet was dropped for one of two reasons: (a) the queue depth was at or above `max_threshold` — the hard limit where all traffic is dropped regardless of ECN — or (b) the queue was in the between-thresholds zone but the flow was not ECN-capable. If this checkpoint is missing during `qos_wred_drop`, verify that your max-threshold boundary uses `>=` (not `>`) so that a depth exactly equal to `max_threshold` triggers a drop, and verify that non-ECN flows in the BETWEEN_THRESHOLDS zone return `"DROP"` rather than `"MARK"`.
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `wred_decision_profile` or `qos_wred_decision` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab31` to confirm tests catch regressions.
+- Intentionally break `wred_decision_profile` or `qos_wred_decision` in `src/routeforge/runtime/qos_advanced.py` and rerun `routeforge check lab31` to confirm tests catch regressions.
 - If `routeforge run lab31_qos_congestion_avoidance_wred --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.

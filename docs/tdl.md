@@ -2,48 +2,77 @@
 
 TDL means **Test Driven Learning**.
 
-It is a gamified side-quest track that focuses on CCNP-adjacent topics not fully covered in the core lab chain.
+It is an optional gamified side-quest track that covers CCNP-adjacent topics not in the core lab chain. Where core labs (lab01–lab39) teach end-to-end protocol workflows, TDL isolates individual concepts into short, focused challenges.
 
-You implement real functions in `src/routeforge/runtime/tdl.py` and use tests to validate behavior.
+## What TDL Covers
 
-## Why TDL Exists
+TDL challenges span five domains that extend beyond the core curriculum:
 
-- Core labs focus on end-to-end protocol workflow.
-- TDL missions isolate one concept at a time.
-- Boss challenges combine multiple concepts with stricter edge cases.
+| Domain | Topics |
+|---|---|
+| **Automation** | YANG path validation, NETCONF, RESTCONF, config drift detection, closed-loop remediation |
+| **Multicast** | RPF check, PIM DR election, IGMP snooping, RP mapping, end-to-end multicast forwarding |
+| **Wireless** | Client join FSM, channel conflict scoring, roaming decision, WMM queue mapping |
+| **Routing Policy** | Prefix lists, route-map sequences, BGP community policy, local-pref/MED transforms |
+| **MPLS** | LDP label allocation, PHP forwarding, L3VPN RT import/export, VPNv4 next-hop reachability |
+| **Resiliency** | HSRP priority tracking, BFD flap dampening, IS-IS LSP pacing, graceful restart |
+
+## Missions vs Bosses
+
+Each domain has **four missions** and **one boss challenge**:
+
+- **Missions (100 XP each)** — single-concept challenges. Implement one function and pass its tests. Faster to complete; good for exploring a topic.
+- **Bosses (300 XP each)** — multi-concept challenges that combine all four missions from the domain. Stricter edge cases, larger test surface. Complete all four missions in a domain before unlocking the boss.
+
+## Prerequisites and Unlock Order
+
+TDL is separate from the core assessment. To start TDL:
+
+1. Complete **lab27_capstone_incident_drill** (the final core lab).
+2. Run `routeforge tdl list` to see which challenges are unlocked.
+
+Within each domain, challenges unlock in order (mission 01, 02, 03, 04, then boss). You cannot skip missions.
+
+## TDL Score vs Core Assessment
+
+TDL XP and badges are tracked separately from the core CCNP assessment score:
+
+- Core score (labs 01–39) determines your PASS / MERIT / DISTINCTION band.
+- TDL XP and domain badges (`automation_complete`, `multicast_complete`, etc.) are bonus achievements.
+- TDL completion does **not** affect `routeforge report` score or `capstone.ready` status.
 
 ## Student Workflow
 
 ```bash
-# 1) see available side quests and lock state
+# 1) See available side quests and lock state
 routeforge tdl list
 
-# 2) inspect one challenge contract
+# 2) Inspect one challenge's contract
 routeforge tdl show tdl_auto_01_yang_path_validation
 
-# 3) code in the real file
+# 3) Implement the target function
 $EDITOR src/routeforge/runtime/tdl.py
 
-# 4) run only one challenge's tests
+# 4) Run only this challenge's tests
 routeforge tdl check tdl_auto_01_yang_path_validation
 
-# 5) run scenario and update TDL XP/progress
+# 5) Run the scenario and update TDL XP/progress
 routeforge tdl run tdl_auto_01_yang_path_validation
 
-# 6) inspect total TDL progress
+# 6) Check total TDL progress
 routeforge tdl progress show
 ```
 
 Notes:
 
-- `routeforge tdl run ...` persists progress in `.routeforge_tdl_progress.json` by default.
-- If prerequisites are not complete, the challenge is blocked.
+- `routeforge tdl run` persists progress in `.routeforge_tdl_progress.json` by default.
+- If prerequisites are not complete, the challenge prints `blocked`.
 - `routeforge tdl check all` runs the full TDL test suite.
 
 ## Challenge Map
 
 | ID | Domain | Kind | XP | Target Symbol |
-| --- | --- | --- | --- | --- |
+|---|---|---|---|---|
 | `tdl_auto_01_yang_path_validation` | Automation | mission | 100 | `validate_yang_path` |
 | `tdl_auto_02_netconf_edit_merge_replace` | Automation | mission | 100 | `netconf_edit_merge_replace` |
 | `tdl_auto_03_restconf_patch_idempotence` | Automation | mission | 100 | `restconf_patch_idempotence` |
@@ -77,11 +106,11 @@ Notes:
 
 ## XP and Badges
 
-- Missions: 100 XP each
-- Bosses: 300 XP each
-- Max XP: 4200
+- Missions: 100 XP each (20 missions × 100 = 2,000 XP maximum from missions)
+- Bosses: 300 XP each (6 bosses × 300 = 1,800 XP maximum from bosses)
+- **Maximum TDL XP: 4,200**
 
-Badges:
+Domain badges (awarded when all missions and boss in a domain are complete):
 
 - `automation_complete`
 - `multicast_complete`
@@ -89,11 +118,11 @@ Badges:
 - `routing_complete`
 - `mpls_complete`
 - `resiliency_complete`
-- `tdl_master`
+- `tdl_master` — awarded when all 6 domain badges are earned
 
 ## Common Failure Patterns
 
-- Returning ad-hoc strings that differ from expected contract strings
-- Skipping deterministic tie-break behavior
-- Mutating input structures when the contract expects copy-on-write
-- Ignoring prerequisite lock sequencing between missions
+- Returning strings that differ from the expected contract values (case matters)
+- Skipping deterministic tie-break behavior in selection functions
+- Mutating input structures (tuples, sets) instead of returning new ones
+- Ignoring prerequisite lock sequencing between missions within a domain

@@ -16,7 +16,49 @@
 
 ## Concept walkthrough
 
-Route-reflector behavior and deterministic convergence semantics. Student-mode coding target for this stage is `src/routeforge/runtime/bgp.py` (`route_reflect`).
+### The problem: iBGP's full-mesh requirement does not scale
+
+Within a single AS, BGP speakers use iBGP to distribute externally learned routes. A fundamental iBGP rule is that a router does not re-advertise a route learned from one iBGP peer to another iBGP peer — this prevents routing loops inside the AS. The consequence is that every iBGP speaker must peer directly with every other iBGP speaker (a full mesh). In a network with N routers, that requires N*(N-1)/2 peering sessions. At 50 routers that is 1,225 sessions; at 100 it is 4,950. The full mesh becomes operationally unmanageable as networks grow.
+
+Route Reflection (RFC 4456) solves this by designating one or more routers as **Route Reflectors (RR)**. Clients peer only with the RR, not with each other. The RR is permitted to re-advertise a route learned from one client to all other clients, breaking the iBGP re-advertisement prohibition in a controlled way.
+
+### Key terms
+
+- **Route Reflector (RR)**: a router that re-advertises iBGP routes received from a client to other clients in the same cluster.
+- **RR client**: a router that has a peering session only with the RR, relying on it for full iBGP reachability.
+- **Reflection**: the act of copying prefixes learned from one client into the routing tables of other clients via the RR.
+- **Convergence**: the state where routing tables have stabilized — no peer has a different view of the network than it had in the previous iteration.
+
+### Topology
+
+```
+        AS 65001 — Route Reflector Cluster
+
+    Client A          Client B
+   (10.0.1.0/24)    (10.0.2.0/24)
+       |                 |
+       +----> [ RR ] <---+
+              /    \
+             /      \
+        Client C   Client D
+       (10.0.3.0/24) (10.0.4.0/24)
+
+  Client A announces 10.0.1.0/24 to RR
+  RR reflects to: B, C, D  (all clients except A)
+  Client B, C, D learn 10.0.1.0/24 without peering with A directly
+```
+
+### How it works
+
+`route_reflect` takes a `learned` dict mapping each client name to the list of prefixes that client has announced, and a `source_client` identifying which client originated the routes being reflected in this call. It returns a new dict mapping every other client to the source client's prefix list.
+
+The key insight: the RR does not merge or modify the prefix list. It distributes the source client's prefixes verbatim to the other clients. Each call to `route_reflect` handles one source client's routes at a time — if you need to reflect routes from multiple clients, you call the function once per client.
+
+`convergence_mark` compares two routing-table snapshots (`before` and `after`) and returns `True` if they are identical. It models the check an operator or control-plane daemon would run to determine whether a topology event (a link going down, a new peer coming up) has finished propagating. When `before == after`, the network has converged; further reflection passes will not change any routing table.
+
+### Correct behavior
+
+Given `learned = {"A": ["10.0.1.0/24", "10.0.2.0/24"], "B": [...], "C": [...]}` and `source_client = "A"`, the return value maps `"B"` and `"C"` each to `["10.0.1.0/24", "10.0.2.0/24"]`. Client `"A"` does not appear as a key in the output. For `convergence_mark`, passing two equal dicts returns `True`; any differing value for any key returns `False`.
 
 ## Implementation TODO map
 
@@ -66,9 +108,8 @@ routeforge debug explain --trace /tmp/lab24_bgp_scaling_patterns.jsonl --step bg
 
 Checkpoint guide:
 
-- `BGP_RR_REFLECT`: Route-reflector behavior and deterministic convergence semantics.
-- `BGP_CONVERGENCE_MARK`: Route-reflector behavior and deterministic convergence semantics.
-- `BGP_MULTIPATH_SELECT`: Multipath route install where policy and tie-breaks allow.
+- `BGP_ROUTE_REFLECT`: fires when `route_reflect` distributes the source client's prefixes to the other clients. If this checkpoint is absent, the function was not called or returned before populating the output dict. If it fires but the source client appears as a key in the returned dict, the exclusion logic is missing — the source should never receive its own reflected routes. If other clients are missing from the output, verify that you are iterating over all keys in `learned` except `source_client`.
+- `BGP_CONVERGENCE`: fires when `convergence_mark` evaluates whether the before and after routing-table snapshots are identical. If this checkpoint is absent, the convergence check step was skipped entirely. If it fires but returns the wrong boolean, confirm that you are doing a direct equality comparison (`before == after`) rather than checking only a subset of keys or using identity comparison (`is`).
 
 ## Failure drills and troubleshooting flow
 

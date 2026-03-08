@@ -1,4 +1,19 @@
-"""Typed bridge messages, validation, and idempotent apply helpers."""
+"""Typed bridge messages, validation, and idempotent apply helpers.
+
+Architecture note
+-----------------
+The bridge is the **target architecture** for Phase 3+ labs, not the current
+execution path.  Labs 01–39 call protocol functions directly (e.g.,
+``compute_stp``, ``run_spf``) for simplicity and testability.
+
+The bridge design specifies how simulators *should* communicate in a
+full multi-sim environment: ``DATAPLANE`` → ``CONTROLPLANE`` → ``SCENARIO``
+via typed, validated, idempotent messages with paired trace events.
+
+If you are curious about the intended architecture, see ``docs/bridge_contract.md``
+for a design overview.  The bridge tests in ``tests/contract/test_bridge.py``
+verify the contract infrastructure independently of the lab scenarios.
+"""
 
 from __future__ import annotations
 

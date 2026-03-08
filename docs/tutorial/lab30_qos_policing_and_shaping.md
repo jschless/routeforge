@@ -2,7 +2,7 @@
 
 ## Learning objectives
 
-- Implement `apply_policer, qos_police_shape` in `src/routeforge/runtime/phase2.py`.
+- Implement `apply_policer, qos_police_shape` in `src/routeforge/runtime/qos_advanced.py`.
 - Deliver `qos_police_rate`: traffic above CIR is policed.
 - Deliver `qos_shape_queue`: excess traffic is queued by shaper.
 - Deliver `qos_shape_release`: queued traffic is released at shape rate.
@@ -16,13 +16,70 @@
 
 ## Concept walkthrough
 
-Rate enforcement pipeline with police and shape stages. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`apply_policer, qos_police_shape`).
+### The problem: protecting network resources from traffic bursts
+
+Without rate controls, a single flow can consume all available bandwidth on a link, starving other flows. QoS provides two complementary mechanisms to enforce rate limits: policing and shaping. They operate differently and serve different purposes; this lab implements both in a single two-stage pipeline.
+
+### Policing: drop excess traffic immediately
+
+A policer measures the rate of incoming traffic and compares it against a configured Committed Information Rate (CIR). Traffic arriving within the CIR is admitted. Traffic arriving above the CIR is excess and is dropped immediately — it is not buffered or delayed, it is simply discarded.
+
+**CIR (Committed Information Rate)**: The maximum rate at which traffic is guaranteed to be admitted. Think of it as the contracted bandwidth limit. Traffic up to this rate is always let through; anything above is excess.
+
+Policing is typically applied at ingress — for example, at the customer edge of a service provider network to enforce the contracted rate. The effect is visible as packet loss when the sender exceeds the CIR.
+
+### Shaping: buffer and pace excess traffic
+
+A shaper also limits traffic to a configured rate, but instead of dropping excess it holds it in a queue and releases it at a controlled rate. Shaping smooths out bursts: a sender that transmits in large bursts will see those bursts absorbed into the queue and metered out evenly.
+
+**Shape rate**: The maximum rate at which the shaper releases frames from its queue. If the admitted rate (after policing) exceeds the shape rate, the surplus waits in the queue rather than being forwarded immediately.
+
+Shaping is typically applied at egress — for example, to pace traffic going out to a slower downstream link.
+
+### The two-stage pipeline
+
+```
+                  offered_kbps
+                       │
+                       ▼
+              ┌─────────────────┐
+              │   POLICER        │  cap at CIR, drop excess
+              │   admitted =     │
+              │   min(offered,   │
+              │       cir)       │
+              └────────┬────────┘
+                       │ admitted_kbps
+                       ▼
+              ┌─────────────────┐
+              │   SHAPER         │  cap at shape_rate, queue remainder
+              │   released =     │
+              │   min(admitted,  │
+              │       shape_rate)│
+              └────────┬────────┘
+                       │ released_kbps
+                       ▼
+                  (forwarded)
+```
+
+`apply_policer` implements the first stage alone: it returns `min(offered_kbps, cir_kbps)`, floored at zero. `qos_police_shape` composes both stages and returns `(admitted_kbps, released_kbps)`.
+
+### Example
+
+CIR = 100 kbps, shape rate = 80 kbps, offered = 150 kbps:
+- Policer admits `min(150, 100) = 100` kbps; 50 kbps is dropped.
+- Shaper releases `min(100, 80) = 80` kbps; 20 kbps waits in the queue.
+
+If the offered rate drops to 60 kbps in the next interval:
+- Policer admits `min(60, 100) = 60` kbps (below CIR, no drop).
+- Shaper releases `min(60, 80) = 60` kbps (below shape rate, no queuing delay).
+
+Note that `QOS_POLICE_EXCESS` fires whenever `offered_kbps > cir_kbps`, even if the excess is small. `QOS_SHAPE_RELEASE` fires whenever the shaper is the binding constraint, i.e., when `admitted_kbps > shape_rate_kbps`.
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
-- File: `src/routeforge/runtime/phase2.py`
+- File: `src/routeforge/runtime/qos_advanced.py`
 - Symbols: `apply_policer, qos_police_shape`
 - Why this target: implement CIR policing logic and deterministic shaping release behavior.
 - Stage check: `routeforge check lab30`
@@ -38,7 +95,7 @@ Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab30_qos_policing_and_shaping`
-3. Edit only `apply_policer, qos_police_shape` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `apply_policer, qos_police_shape` in `src/routeforge/runtime/qos_advanced.py`.
 4. Run `routeforge check lab30` until it exits with status `0`.
 5. Run `routeforge run lab30_qos_policing_and_shaping --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -73,13 +130,13 @@ routeforge debug explain --trace /tmp/lab30_qos_policing_and_shaping.jsonl --ste
 
 Checkpoint guide:
 
-- `QOS_POLICE`: first expected pipeline milestone.
-- `QOS_SHAPE_QUEUE`: second expected pipeline milestone.
-- `QOS_SHAPE_RELEASE`: third expected pipeline milestone.
+- `QOS_POLICE_ADMIT`: Traffic was at or below the CIR and was admitted without loss. The `admitted_kbps` value equals `offered_kbps`. If this checkpoint is missing during the `qos_police_rate` step, your policer may be incorrectly dropping traffic that is within the CIR — check that `min(offered_kbps, cir_kbps)` returns `offered_kbps` when `offered_kbps <= cir_kbps`.
+- `QOS_POLICE_EXCESS`: The offered rate exceeded the CIR and the excess was dropped. `admitted_kbps < offered_kbps`. This checkpoint fires alongside `QOS_POLICE_ADMIT` in the same step when both portions are present. If this checkpoint is missing when you expect excess to be dropped, your policer is not capping at the CIR — check that you use `min()` and not an unconstrained passthrough.
+- `QOS_SHAPE_RELEASE`: The shaper was the binding constraint: `admitted_kbps > shape_rate_kbps`, so `released_kbps = shape_rate_kbps < admitted_kbps`. The difference between admitted and released is held in the shaping queue. If this checkpoint is missing during `qos_shape_release`, your shaper is not applying the `min(admitted, shape_rate)` constraint — verify that the second stage of `qos_police_shape` uses `shape_rate_kbps` as an upper bound on the returned `released` value.
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `apply_policer` or `qos_police_shape` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab30` to confirm tests catch regressions.
+- Intentionally break `apply_policer` or `qos_police_shape` in `src/routeforge/runtime/qos_advanced.py` and rerun `routeforge check lab30` to confirm tests catch regressions.
 - If `routeforge run lab30_qos_policing_and_shaping --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.

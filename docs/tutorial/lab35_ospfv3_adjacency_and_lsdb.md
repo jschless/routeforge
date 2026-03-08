@@ -2,11 +2,11 @@
 
 ## Learning objectives
 
-- Implement `ospfv3_neighbor_result, ospfv3_adjacency_lsdb` in `src/routeforge/runtime/phase2.py`.
+- Implement `ospfv3_neighbor_result, ospfv3_adjacency_lsdb` in `src/routeforge/runtime/ipv6.py`.
 - Deliver `ospfv3_hello_rx`: valid hello advances adjacency.
 - Deliver `ospfv3_neighbor_full`: adjacency reaches FULL state.
 - Deliver `ospfv3_lsa_install`: IPv6 LSA is installed in LSDB.
-- Validate internal behavior through checkpoints: OSPFV3_HELLO_RX, OSPFV3_NEIGHBOR_FULL, OSPFV3_LSA_INSTALL.
+- Validate internal behavior through checkpoints: OSPFV3_ADJ_FULL, OSPFV3_ADJ_DOWN, OSPFV3_LSA_INSTALL.
 
 ## Prerequisite recap
 
@@ -16,13 +16,45 @@
 
 ## Concept walkthrough
 
-OSPFv3 neighbor formation and IPv6 LSDB state transitions. Student-mode coding target for this stage is `src/routeforge/runtime/phase2.py` (`ospfv3_neighbor_result, ospfv3_adjacency_lsdb`).
+OSPFv3 is the IPv6 adaptation of the OSPF link-state routing protocol. Like OSPFv2, it discovers neighbors by exchanging Hello packets, synchronizes a Link-State Database (LSDB) through database exchange, and then runs SPF to compute shortest paths. The key difference is that OSPFv3 runs over IPv6 link-local addresses and carries IPv6 topology information in its LSAs.
+
+The adjacency lifecycle has several states, but for this lab only two outcomes matter:
+
+- `FULL`: the neighbor relationship is established and LSAs can be exchanged.
+- `DOWN`: the hello handshake failed or was never completed; no LSAs are exchanged.
+
+Hello validation is the gatekeeper. Two routers become neighbors only if their Hello packets agree on area ID, hello interval, dead interval, and certain option flags. If any parameter mismatches, the adjacency stays in `DOWN` and no topology information is shared.
+
+```
+  RouterA                        RouterB
+  -------                        -------
+  hello (area 0, interval 10) -->
+                              <-- hello (area 0, interval 10)
+  state: FULL                    state: FULL
+  LSDB: {lsa-B}                  LSDB: {lsa-A}
+
+  -- vs --
+
+  hello (area 0, interval 10) -->
+                              <-- hello (area 1, interval 30)  [mismatch]
+  state: DOWN                    state: DOWN
+  LSDB: unchanged                LSDB: unchanged
+```
+
+Once adjacency reaches `FULL`, the routers flood their LSAs to each other. Each LSA has a unique identifier. The LSDB is simply the set of all LSA IDs that this router has received and stored. When a new LSA arrives it is added to the set; duplicate LSA IDs are ignored (the set deduplicates automatically).
+
+In this lab `ospfv3_adjacency_lsdb` models this in one function call:
+
+- If `hello_ok` is `False`: the adjacency is `DOWN`. Return the existing LSDB unchanged.
+- If `hello_ok` is `True`: the adjacency is `FULL`. Return the LSDB with `lsa_id` added.
+
+The helper `ospfv3_neighbor_result` converts the boolean directly to `"FULL"` or `"DOWN"` for use in places where only the adjacency state (not the LSDB) is needed.
 
 ## Implementation TODO map
 
 Primary target for this stage:
 
-- File: `src/routeforge/runtime/phase2.py`
+- File: `src/routeforge/runtime/ipv6.py`
 - Symbols: `ospfv3_neighbor_result, ospfv3_adjacency_lsdb`
 - Why this target: derive neighbor state transition and LSDB install output from one deterministic pipeline.
 - Stage check: `routeforge check lab35`
@@ -38,7 +70,7 @@ Suggested student walkthrough:
 
 1. `git switch student`
 2. `routeforge show lab35_ospfv3_adjacency_and_lsdb`
-3. Edit only `ospfv3_neighbor_result, ospfv3_adjacency_lsdb` in `src/routeforge/runtime/phase2.py`.
+3. Edit only `ospfv3_neighbor_result, ospfv3_adjacency_lsdb` in `src/routeforge/runtime/ipv6.py`.
 4. Run `routeforge check lab35` until it exits with status `0`.
 5. Run `routeforge run lab35_ospfv3_adjacency_and_lsdb --state-file "$STATE"` to confirm visible lab behavior and progress state updates.
 
@@ -59,7 +91,7 @@ Expected outcomes:
 - `ospfv3_hello_rx` should print `[PASS]` (valid hello advances adjacency).
 - `ospfv3_neighbor_full` should print `[PASS]` (adjacency reaches FULL state).
 - `ospfv3_lsa_install` should print `[PASS]` (IPv6 LSA is installed in LSDB).
-- Run output includes checkpoints: OSPFV3_HELLO_RX, OSPFV3_NEIGHBOR_FULL, OSPFV3_LSA_INSTALL.
+- Run output includes checkpoints: OSPFV3_ADJ_FULL, OSPFV3_ADJ_DOWN, OSPFV3_LSA_INSTALL.
 
 ## Debug trace checkpoints and interpretation guidance
 
@@ -73,13 +105,15 @@ routeforge debug explain --trace /tmp/lab35_ospfv3_adjacency_and_lsdb.jsonl --st
 
 Checkpoint guide:
 
-- `OSPFV3_HELLO_RX`: first expected pipeline milestone.
-- `OSPFV3_NEIGHBOR_FULL`: second expected pipeline milestone.
-- `OSPFV3_LSA_INSTALL`: third expected pipeline milestone.
+- `OSPFV3_ADJ_FULL`: fires when the hello handshake succeeds and the adjacency reaches `FULL` state. The function received `hello_ok=True` and returned `"FULL"` as the first tuple element. If this checkpoint is missing, check that your `hello_ok=True` branch returns `"FULL"` and not `"DOWN"`, and that you are not accidentally treating `True` as a falsy value.
+
+- `OSPFV3_ADJ_DOWN`: fires when the hello check fails and the adjacency remains in `DOWN` state. The function received `hello_ok=False` and returned `"DOWN"` along with the unmodified LSDB. If this checkpoint is missing when you send a failing hello, verify that your `hello_ok=False` branch returns the original `lsdb` set without adding `lsa_id`.
+
+- `OSPFV3_LSA_INSTALL`: fires when a new LSA identifier is added to the LSDB as a result of a successful adjacency. This checkpoint fires only alongside `OSPFV3_ADJ_FULL`. If `OSPFV3_ADJ_FULL` fires but `OSPFV3_LSA_INSTALL` does not, confirm that you are returning `lsdb | {lsa_id}` (or an equivalent copy with the new element) rather than returning the original set unmodified.
 
 ## Failure drills and troubleshooting flow
 
-- Intentionally break `ospfv3_neighbor_result` or `ospfv3_adjacency_lsdb` in `src/routeforge/runtime/phase2.py` and rerun `routeforge check lab35` to confirm tests catch regressions.
+- Intentionally break `ospfv3_neighbor_result` or `ospfv3_adjacency_lsdb` in `src/routeforge/runtime/ipv6.py` and rerun `routeforge check lab35` to confirm tests catch regressions.
 - If `routeforge run lab35_ospfv3_adjacency_and_lsdb --state-file "$STATE"` prints `blocked`, complete prerequisites first or mark prior labs in your state file.
 - Use `routeforge debug explain ... --step <failing_step>` to isolate exactly which assertion failed.
 - Compare your local output with the expected steps/checkpoints in this chapter before changing unrelated files.
