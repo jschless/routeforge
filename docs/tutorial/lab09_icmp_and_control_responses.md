@@ -83,3 +83,12 @@ Checkpoint guide:
 - RFC 792 (ICMP).
 - RFC 826 (ARP).
 
+## Concept Deepening Notes
+
+ICMP responses are control-plane side effects of forwarding outcomes. A clean implementation maps each trigger condition (echo request, no route, TTL expiry) to one deterministic response type. Avoid overlapping branches; explicit ordering prevents ambiguous behavior when multiple conditions could appear true.
+
+## Checkpoint Guide (Expanded)
+
+- `ICMP_ECHO_REPLY`: Confirm this marker appears when your implementation follows the intended decision path.
+- `ICMP_UNREACHABLE`: Confirm this marker appears when your implementation follows the intended decision path.
+- `ICMP_TIME_EXCEEDED`: Confirm this marker appears when your implementation follows the intended decision path.

@@ -132,3 +132,11 @@ Checkpoint guide:
 - IEEE 802.1D (bridging and STP fundamentals).
 - IEEE 802.1Q (VLAN tagging and trunk behavior).
 
+## Concept Deepening Notes
+
+STP is about deterministic tie-breakers under topology ambiguity. Root election, path cost computation, and port role assignment must be stable across equivalent inputs. Treat each stage as a pure function over topology state; unstable tie handling here often appears as intermittent failures in later reconvergence labs.
+
+## Checkpoint Guide (Expanded)
+
+- `STP_ROOT_CHANGE`: Confirm this marker appears when your implementation follows the intended decision path.
+- `STP_PORT_ROLE_CHANGE`: Confirm this marker appears when your implementation follows the intended decision path.

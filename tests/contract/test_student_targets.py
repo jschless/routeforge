@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from routeforge.labs.exercises import LAB_RUNNERS
-from routeforge.labs.student_targets import load_student_targets, signatures_for_target
+from routeforge.labs.student_targets import load_student_targets, signatures_for_target, validate_student_targets
 
 
 def test_student_targets_cover_every_lab() -> None:
@@ -27,3 +27,7 @@ def test_student_target_signatures_are_cleanly_formatted() -> None:
     assert all("-> unknown" not in sig for sig in sigs)
     assert all(sig.count("->") == 1 for sig in sigs)
     assert all("routeforge." not in sig for sig in sigs)
+
+
+def test_student_target_symbols_validate() -> None:
+    assert validate_student_targets() == ()

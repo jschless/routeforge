@@ -123,3 +123,11 @@ Checkpoint guide:
 
 - RFC 4271 (BGP-4).
 
+## Concept Deepening Notes
+
+Best-path selection is a ranking pipeline with strict ordering. Each attribute comparison stage should be explicit and deterministic, especially under ties. If comparisons are implicit or partially ordered, route choice appears unstable and policy labs become hard to reason about.
+
+## Checkpoint Guide (Expanded)
+
+- `BGP_UPDATE_RX`: Confirm this marker appears when your implementation follows the intended decision path.
+- `BGP_BEST_PATH`: Confirm this marker appears when your implementation follows the intended decision path.

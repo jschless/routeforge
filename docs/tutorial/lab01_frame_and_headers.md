@@ -129,3 +129,15 @@ Checkpoint guide:
 
 - IEEE 802.1D (bridging and STP fundamentals).
 - IEEE 802.1Q (VLAN tagging and trunk behavior).
+
+## Concept Deepening Notes
+
+Frame validation is the first contract boundary in RouteForge. The most important mental model is that malformed input must fail deterministically with explicit reason strings, not ad hoc exceptions. Later labs assume this boundary is stable, so consistency in error classification here prevents cascading ambiguity when forwarding, ACL, or routing logic is layered on top.
+
+## Checkpoint Guide (Expanded)
+
+- `PARSE_OK`: Confirm this marker appears when your implementation follows the intended decision path.
+- `VLAN_CLASSIFY`: Confirm this marker appears when your implementation follows the intended decision path.
+- `MAC_LEARN`: Confirm this marker appears when your implementation follows the intended decision path.
+- `L2_FLOOD`: Confirm this marker appears when your implementation follows the intended decision path.
+- `PARSE_DROP`: Confirm this marker appears when your implementation follows the intended decision path.

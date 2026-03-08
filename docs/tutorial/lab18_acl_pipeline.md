@@ -79,3 +79,12 @@ Checkpoint guide:
 
 - Ordered first-match ACL evaluation patterns used by routers/firewalls.
 
+## Concept Deepening Notes
+
+ACL pipelines are ordered decision systems, not unordered rule sets. The key invariant is first-match semantics with explicit default deny behavior. Keep evaluation order and action mapping deterministic so policy troubleshooting can explain exactly why traffic was permitted or denied.
+
+## Checkpoint Guide (Expanded)
+
+- `ACL_EVALUATE`: Confirm this marker appears when your implementation follows the intended decision path.
+- `ACL_PERMIT`: Confirm this marker appears when your implementation follows the intended decision path.
+- `ACL_DENY`: Confirm this marker appears when your implementation follows the intended decision path.

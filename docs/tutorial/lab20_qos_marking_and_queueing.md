@@ -83,3 +83,12 @@ Checkpoint guide:
 - RFC 2474 / RFC 2475 (DiffServ marking and QoS service model).
 - RFC 4301 (IPsec architecture).
 
+## Concept Deepening Notes
+
+QoS behavior here is pipeline-oriented: classify/remark, enqueue, then dequeue according to deterministic scheduler policy. Keep each stage explicit and side-effect boundaries clear. If queue state is mutated inconsistently, you will see apparent randomness in dequeue outcomes despite stable inputs.
+
+## Checkpoint Guide (Expanded)
+
+- `QOS_REMARK`: Confirm this marker appears when your implementation follows the intended decision path.
+- `QOS_ENQUEUE`: Confirm this marker appears when your implementation follows the intended decision path.
+- `QOS_DEQUEUE`: Confirm this marker appears when your implementation follows the intended decision path.

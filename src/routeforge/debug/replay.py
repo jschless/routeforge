@@ -34,6 +34,22 @@ def replay_lines(records: list[dict[str, Any]]) -> list[str]:
     return lines
 
 
+def checkpoints_in_trace(records: list[dict[str, Any]]) -> tuple[str, ...]:
+    checkpoints: set[str] = set()
+    for record in records:
+        for checkpoint in record.get("checkpoints", []):
+            checkpoints.add(str(checkpoint))
+    return tuple(sorted(checkpoints))
+
+
+def filter_checkpoint(records: list[dict[str, Any]], checkpoint: str) -> list[dict[str, Any]]:
+    return [
+        record
+        for record in records
+        if checkpoint in set(str(item) for item in record.get("checkpoints", []))
+    ]
+
+
 def explain_lines(records: list[dict[str, Any]], *, step: str | None = None) -> list[str]:
     if not records:
         return ["no trace records"]
@@ -70,7 +86,7 @@ def explain_lines(records: list[dict[str, Any]], *, step: str | None = None) -> 
         f"egress_ports: {egress_ports}",
         f"checkpoints: {checkpoints}",
     ]
-    # Emit protocol-specific detail fields (OSPF state, BGP attributes, L3
+    # Emit protocol-specific detail fields (OSPF state, BGP path attributes, L3
     # decisions, etc.) so students see context without writing a custom parser.
     if details := record.get("details"):
         for key, value in sorted(details.items()):

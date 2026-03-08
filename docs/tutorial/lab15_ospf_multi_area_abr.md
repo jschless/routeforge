@@ -129,3 +129,11 @@ Checkpoint guide:
 
 - RFC 2328 (OSPFv2).
 
+## Concept Deepening Notes
+
+ABR summary generation is a policy boundary between detailed and aggregate topology knowledge. The core skill is deterministic summarization: identical area inputs must yield identical summary prefixes and costs. Keep summary derivation and RIB programming distinct so you can debug origin vs install faults independently.
+
+## Checkpoint Guide (Expanded)
+
+- `OSPF_SUMMARY_ORIGINATE`: Confirm this marker appears when your implementation follows the intended decision path.
+- `OSPF_INTERAREA_ROUTE_INSTALL`: Confirm this marker appears when your implementation follows the intended decision path.

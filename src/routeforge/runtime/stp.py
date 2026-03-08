@@ -166,6 +166,18 @@ def compute_stp(bridges: list[Bridge], links: list[Link]) -> STPResult:
     This function is pre-filled as a scaffold — implement the four helper
     functions above and this will produce the correct ``STPResult``.
 
+    The decomposition is intentional, not cosmetic. Each helper maps to a
+    distinct IEEE 802.1D election phase, and each phase depends on the prior
+    phase's output. Implement in order:
+
+    1. ``_elect_root_bridge`` to lock deterministic root identity.
+    2. ``_compute_root_path_costs`` to establish path vectors to that root.
+    3. ``_compute_root_ports`` to choose the best upstream port per bridge.
+    4. ``_assign_port_roles`` to resolve per-segment designated/alternate roles.
+
+    If you skip ahead, later role calculations can look correct in isolated
+    cases while still failing deterministic tie-break tests.
+
     The algorithm (IEEE 802.1D simplified) is broken into steps:
     1. ``_elect_root_bridge`` — lowest BridgeID wins.
     2. ``_compute_root_path_costs`` — Dijkstra from root.
@@ -206,9 +218,9 @@ def bpdu_guard_decision(*, port: tuple[str, str], edge_port: bool, bpdu_received
 
     Rules:
     - If ``edge_port`` is True and ``bpdu_received`` is True:
-      return ``GuardDecision(port=port, action="ERR_DISABLE", reason="BPDU_GUARD_VIOLATION")``.
+      return ``GuardDecision(port=port, action="ERRDISABLE", reason="STP_BPDU_GUARD_TRIPPED")``.
     - Otherwise (non-edge port, or no BPDU received):
-      return ``GuardDecision(port=port, action="ALLOW", reason="OK")``.
+      return ``GuardDecision(port=port, action="FORWARD", reason="STP_GUARD_CLEAR")``.
 
     Edge ports are ports connected to end-hosts; receiving a BPDU on one
     indicates a rogue switch is attached, so the port is shut down.

@@ -14,6 +14,7 @@ def test_tdl_list_and_show_commands(capsys) -> None:
     show_output = capsys.readouterr().out
     assert "id: tdl_mcast_01_rpf_check" in show_output
     assert "tdl.target: src/routeforge/runtime/tdl.py" in show_output
+    assert "conformance.overlap:" in show_output
 
 
 def test_tdl_run_blocks_unmet_prereqs(capsys, tmp_path) -> None:

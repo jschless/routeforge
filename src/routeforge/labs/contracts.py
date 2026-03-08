@@ -19,6 +19,7 @@ class LabStepResult:
     passed: bool
     detail: str
     outcome: TraceableOutcome
+    status: str | None = None
 
 
 @dataclass(frozen=True)
@@ -122,6 +123,24 @@ class FeatureOutcome:
             "action": self.action,
             "reason": self.reason,
             "details": self.details,
+            "checkpoints": list(self.checkpoints),
+        }
+
+
+@dataclass(frozen=True)
+class ErrorOutcome:
+    action: str
+    reason: str
+    checkpoints: tuple[str, ...] = ()
+    details: dict[str, Any] | None = None
+
+    def to_trace_record(self, *, step: str, sequence: int) -> dict[str, Any]:
+        return {
+            "seq": sequence,
+            "step": step,
+            "action": self.action,
+            "reason": self.reason,
+            "details": self.details or {},
             "checkpoints": list(self.checkpoints),
         }
 

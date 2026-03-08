@@ -21,6 +21,7 @@ class StudentTarget:
     path: str
     symbols: tuple[str, ...]
     summary: str
+    prereq_reason: str | None = None
 
 
 def _as_symbol_tuple(value: Any, field_name: str) -> tuple[str, ...]:
@@ -57,6 +58,7 @@ def load_student_targets(path: Path | None = None) -> dict[str, StudentTarget]:
         stage = item.get("stage")
         source_path = item.get("path")
         summary = item.get("summary")
+        prereq_reason = item.get("prereq_reason")
         if not isinstance(lab_id, str) or not lab_id:
             raise ValueError("target.lab_id must be a non-empty string")
         if not isinstance(stage, int) or stage <= 0:
@@ -65,6 +67,8 @@ def load_student_targets(path: Path | None = None) -> dict[str, StudentTarget]:
             raise ValueError(f"target[{lab_id}].path must be a non-empty string")
         if not isinstance(summary, str) or not summary:
             raise ValueError(f"target[{lab_id}].summary must be a non-empty string")
+        if prereq_reason is not None and not isinstance(prereq_reason, str):
+            raise ValueError(f"target[{lab_id}].prereq_reason must be a string when present")
         if lab_id in targets_by_lab:
             raise ValueError(f"duplicate target lab_id: {lab_id}")
 
@@ -74,6 +78,7 @@ def load_student_targets(path: Path | None = None) -> dict[str, StudentTarget]:
             path=source_path,
             symbols=_as_symbol_tuple(item.get("symbols"), f"target[{lab_id}].symbols"),
             summary=summary,
+            prereq_reason=prereq_reason.strip() if isinstance(prereq_reason, str) and prereq_reason.strip() else None,
         )
 
     return targets_by_lab
@@ -97,15 +102,20 @@ def _shorten_signature_text(text: str) -> str:
 
 def _resolve_symbol_signature(*, module_name: str, symbol: str) -> str:
     module = importlib.import_module(module_name)
-    parts = symbol.split(".")
-    target: Any = module
-    for part in parts:
-        target = getattr(target, part)
+    target = _resolve_symbol_obj(module=module, symbol=symbol)
     try:
         signature = inspect.signature(target, eval_str=True)
     except Exception:
         signature = inspect.signature(target)
     return f"{symbol}{_shorten_signature_text(str(signature))}"
+
+
+def _resolve_symbol_obj(*, module: object, symbol: str) -> Any:
+    parts = symbol.split(".")
+    target: Any = module
+    for part in parts:
+        target = getattr(target, part)
+    return target
 
 
 def signatures_for_target(target: StudentTarget) -> tuple[str, ...]:
@@ -117,3 +127,23 @@ def signatures_for_target(target: StudentTarget) -> tuple[str, ...]:
         except Exception:
             signatures.append(f"{symbol}(...) -> unknown")
     return tuple(signatures)
+
+
+def validate_student_targets(path: Path | None = None) -> tuple[str, ...]:
+    warnings: list[str] = []
+    targets = load_student_targets(path)
+    for target in targets.values():
+        module_name = _path_to_module(target.path)
+        try:
+            module = importlib.import_module(module_name)
+        except Exception as exc:
+            warnings.append(f"{target.lab_id}: failed to import {module_name} ({exc})")
+            continue
+        for symbol in target.symbols:
+            try:
+                _resolve_symbol_obj(module=module, symbol=symbol)
+            except Exception as exc:
+                warnings.append(
+                    f"{target.lab_id}: missing symbol {symbol} in {module_name} ({type(exc).__name__}: {exc})"
+                )
+    return tuple(warnings)

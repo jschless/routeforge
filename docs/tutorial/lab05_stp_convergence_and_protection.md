@@ -32,7 +32,7 @@ When a link fails, the bridges on adjacent segments detect the loss and must re-
 - `bpdu_guard_decision(port=("sw1","eth2"), edge_port=False, bpdu_received=True)`:
   → `GuardDecision(port=("sw1","eth2"), action="ALLOW", reason="OK")` (non-edge, expected to see BPDUs)
 
-Student-mode coding target for this stage is `src/routeforge/runtime/stp.py` (`bpdu_guard_decision`).
+Student-mode coding target for this stage is `src/routeforge/runtime/stp.py` (`role_changes, bpdu_guard_decision`).
 
 ## Implementation TODO map
 
@@ -107,3 +107,4 @@ Checkpoint guide:
 
 - IEEE 802.1D (bridging and STP fundamentals).
 - IEEE 802.1Q (VLAN tagging and trunk behavior).
+

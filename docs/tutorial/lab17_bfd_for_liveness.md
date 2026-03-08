@@ -79,3 +79,12 @@ Checkpoint guide:
 
 - RFC 5880 (BFD base specification).
 
+## Concept Deepening Notes
+
+BFD is primarily about timer-driven liveness confidence. Correctness requires predictable transitions under control reception and timeout paths, with no hidden state jumps. Deterministic timeout handling is essential because routing failover policy later assumes BFD state is trustworthy and not oscillating.
+
+## Checkpoint Guide (Expanded)
+
+- `BFD_CONTROL_RX`: Confirm this marker appears when your implementation follows the intended decision path.
+- `BFD_STATE_CHANGE`: Confirm this marker appears when your implementation follows the intended decision path.
+- `BFD_TIMEOUT`: Confirm this marker appears when your implementation follows the intended decision path.

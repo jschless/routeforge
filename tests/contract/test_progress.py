@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
+
 from routeforge.labs.progress import (
     ProgressState,
     apply_run_result,
     clear_progress,
     load_progress,
+    migrate_progress,
     mark_completed,
     save_progress,
     unlocked_labs,
@@ -44,3 +47,34 @@ def test_apply_run_result_and_unlock_flow() -> None:
     assert state.pass_counts["lab01_frame_and_headers"] == 1
     assert state.last_result["lab02_mac_learning_switch"] == "FAIL"
     assert unlocked_labs(state)[0] == "lab03_vlan_and_trunks"
+
+
+def test_load_legacy_progress_without_version_returns_empty(tmp_path, capsys) -> None:
+    path = tmp_path / "legacy.json"
+    path.write_text(
+        json.dumps({"completed": ["lab01_frame_and_headers"], "run_counts": {"lab01_frame_and_headers": 2}}),
+        encoding="utf-8",
+    )
+    state = load_progress(path)
+    output = capsys.readouterr().out
+    assert "legacy format" in output
+    assert state.completed == ()
+
+
+def test_migrate_progress_adds_current_version(tmp_path) -> None:
+    path = tmp_path / "legacy.json"
+    path.write_text(
+        json.dumps(
+            {
+                "completed": ["lab01_frame_and_headers"],
+                "run_counts": {"lab01_frame_and_headers": 2},
+                "pass_counts": {"lab01_frame_and_headers": 1},
+                "last_result": {"lab01_frame_and_headers": "PASS"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    migrated_path = migrate_progress(path)
+    migrated = load_progress(migrated_path)
+    assert migrated.version == 1
+    assert migrated.completed == ("lab01_frame_and_headers",)
