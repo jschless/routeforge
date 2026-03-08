@@ -5,6 +5,7 @@ import pytest
 from routeforge.cli import main
 from routeforge.labs.assessment import load_assessment_rubric
 from routeforge.labs.manifest import LABS
+from routeforge.labs.student_checks import StudentCheckFailure, StudentCheckRun
 
 
 def test_labs_command_runs() -> None:
@@ -134,13 +135,53 @@ def test_check_command_uses_stage_limit(monkeypatch, capsys) -> None:
     def _fake_run_staged_student_checks(*, stage_max: int, repo_root):  # type: ignore[no-untyped-def]
         captured["stage_max"] = stage_max
         captured["repo_root"] = repo_root
-        return 0
+        return StudentCheckRun(
+            returncode=0,
+            passed=1,
+            total=1,
+            failures=(),
+            raw_output="1 passed in 0.01s",
+        )
 
     monkeypatch.setattr("routeforge.cli.run_staged_student_checks", _fake_run_staged_student_checks)
     assert main(["check", "lab01"]) == 0
     output = capsys.readouterr().out
     assert "stage_max=1" in output
+    assert "1 of 1 tests passed" in output
     assert captured["stage_max"] == 1
+
+
+def test_check_command_formats_failures(monkeypatch, capsys) -> None:
+    def _fake_run_staged_student_checks(*, stage_max: int, repo_root):  # type: ignore[no-untyped-def]
+        return StudentCheckRun(
+            returncode=1,
+            passed=2,
+            total=3,
+            failures=(StudentCheckFailure("tests/student/test_stage_progression.py::test_lab03", "expected VLAN tag"),),
+            raw_output="raw output",
+        )
+
+    monkeypatch.setattr("routeforge.cli.run_staged_student_checks", _fake_run_staged_student_checks)
+    assert main(["check", "lab03"]) == 1
+    output = capsys.readouterr().out
+    assert "[FAIL] test_lab03: expected VLAN tag" in output
+    assert "2 of 3 tests passed" in output
+
+
+def test_check_command_verbose_prints_raw(monkeypatch, capsys) -> None:
+    def _fake_run_staged_student_checks(*, stage_max: int, repo_root):  # type: ignore[no-untyped-def]
+        return StudentCheckRun(
+            returncode=1,
+            passed=0,
+            total=1,
+            failures=(StudentCheckFailure("tests/student/test_stage_progression.py::test_lab01", "bad frame"),),
+            raw_output="RAW PYTEST OUTPUT",
+        )
+
+    monkeypatch.setattr("routeforge.cli.run_staged_student_checks", _fake_run_staged_student_checks)
+    assert main(["check", "lab01", "--verbose"]) == 1
+    output = capsys.readouterr().out
+    assert "RAW PYTEST OUTPUT" in output
 
 
 def test_run_command_writes_trace(tmp_path) -> None:
@@ -219,6 +260,7 @@ def test_progress_show_mark_reset_and_report(tmp_path, capsys) -> None:
     assert f"labs.completed: 1/{total_labs}" in report_out
     assert "assessment.score:" in report_out
     assert "assessment.band:" in report_out
+    assert "assessment.recommended_labs:" in report_out
     assert "assessment.remediation_docs:" in report_out
     assert "capstone.ready: no" in report_out
 
@@ -270,5 +312,17 @@ def test_report_writes_json_output(tmp_path, capsys) -> None:
     expected_score = 100.0 * lab01_weight / total_weight
     assert payload["assessment"]["overall_score"] == pytest.approx(expected_score)
     assert payload["assessment"]["band"] == "BELOW_PASS"
+    assert payload["assessment"]["recommended_labs"] == []
     assert payload["assessment"]["remediation_docs"] == []
     assert payload["capstone_ready"] is False
+
+
+def test_status_command_outputs_position_and_next(tmp_path, capsys) -> None:
+    state = tmp_path / "progress.json"
+    assert main(["progress", "mark", "lab01_frame_and_headers", "--state-file", str(state)]) == 0
+    capsys.readouterr()
+    assert main(["status", "--state-file", str(state)]) == 0
+    output = capsys.readouterr().out
+    assert "position: lab01_frame_and_headers" in output
+    assert "next: lab02_mac_learning_switch" in output
+    assert "score:" in output

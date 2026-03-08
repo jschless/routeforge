@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import json
 from pathlib import Path
 import re
@@ -11,15 +12,17 @@ from routeforge.debug.replay import explain_lines, load_trace, replay_lines
 from routeforge.labs.assessment import evaluate_assessment, load_assessment_rubric
 from routeforge.labs.conformance import load_conformance_matrix
 from routeforge.labs.exercises import LAB_RUNNERS, run_lab
-from routeforge.labs.manifest import LABS, get_lab, missing_prereqs
-from routeforge.labs.student_checks import run_staged_student_checks
+from routeforge.labs.manifest import LABS, get_lab, missing_prereqs, prerequisite_chain
+from routeforge.labs.student_checks import StudentCheckRun, run_staged_student_checks
 from routeforge.labs.student_targets import signatures_for_target, student_target_for_lab
 from routeforge.labs.progress import (
+    CURRENT_VERSION as PROGRESS_VERSION,
     DEFAULT_PROGRESS_PATH,
     ProgressState,
     apply_run_result,
     clear_progress,
     load_progress,
+    migrate_progress,
     mark_completed,
     save_progress,
     unlocked_labs,
@@ -28,11 +31,13 @@ from routeforge.tdl.checks import run_tdl_checks
 from routeforge.tdl.exercises import run_tdl_challenge
 from routeforge.tdl.manifest import TDL_CHALLENGES, get_tdl_challenge, tdl_missing_prereqs
 from routeforge.tdl.progress import (
+    CURRENT_VERSION as TDL_PROGRESS_VERSION,
     DEFAULT_TDL_PROGRESS_PATH,
     TdlProgressState,
     apply_tdl_run_result,
     clear_tdl_progress,
     load_tdl_progress,
+    migrate_tdl_progress,
     save_tdl_progress,
     unlocked_tdl_challenges,
 )
@@ -42,7 +47,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="routeforge")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("labs", help="List ordered labs")
+    labs = sub.add_parser("labs", help="List ordered labs")
+    labs.add_argument("--state-file", type=Path, default=None)
+
+    status = sub.add_parser("status", help="Show current position, next lab, and score snapshot")
+    status.add_argument("--state-file", type=Path, default=None)
 
     show = sub.add_parser("show", help="Show one lab entry")
     show.add_argument("lab_id")
@@ -60,6 +69,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     check = sub.add_parser("check", help="Run staged student tests up to one lab or all labs")
     check.add_argument("target", help="Lab stage target (for example: lab01, lab01_frame_and_headers, or all)")
+    check.add_argument("--verbose", action="store_true", help="Show raw pytest output")
 
     progress = sub.add_parser("progress", help="Show and manage learner progress")
     progress_sub = progress.add_subparsers(dest="progress_command", required=True)
@@ -73,6 +83,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     progress_reset = progress_sub.add_parser("reset", help="Reset progress state")
     progress_reset.add_argument("--state-file", type=Path, default=None)
+
+    progress_migrate = progress_sub.add_parser("migrate", help="Migrate legacy progress state to current schema")
+    progress_migrate.add_argument("--state-file", type=Path, default=None)
 
     tdl = sub.add_parser("tdl", help="Run TDL side-quest challenges")
     tdl_sub = tdl.add_subparsers(dest="tdl_command", required=True)
@@ -99,6 +112,11 @@ def _build_parser() -> argparse.ArgumentParser:
     tdl_progress_reset = tdl_progress_sub.add_parser("reset", help="Reset TDL progress state")
     tdl_progress_reset.add_argument("--state-file", type=Path, default=None)
 
+    tdl_progress_migrate = tdl_progress_sub.add_parser(
+        "migrate", help="Migrate legacy TDL progress state to current schema"
+    )
+    tdl_progress_migrate.add_argument("--state-file", type=Path, default=None)
+
     report = sub.add_parser("report", help="Generate learner readiness report")
     report.add_argument("--state-file", type=Path, default=None)
     report.add_argument("--rubric-file", type=Path, default=None, help="Optional assessment rubric YAML path")
@@ -106,6 +124,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     hint = sub.add_parser("hint", help="Show stub contracts and debug pointers for one lab")
     hint.add_argument("lab_id")
+    hint.add_argument("--symbol", default=None, help="Optional symbol name to scope hint output")
 
     debug = sub.add_parser("debug", help="Replay and explain trace files")
     debug_sub = debug.add_subparsers(dest="debug_command", required=True)
@@ -120,9 +139,45 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _cmd_labs() -> int:
-    for entry in LABS:
-        print(f"{entry['id']}: {entry['title']}")
+PHASE_GROUPS: tuple[tuple[str, range], ...] = (
+    ("Phase 1: Foundation (labs 01-10)", range(1, 11)),
+    ("Phase 2: Switching/Services (labs 11-20)", range(11, 21)),
+    ("Phase 3: BGP (labs 21-27)", range(21, 28)),
+    ("Phase 4: Phase 2 (labs 28-39)", range(28, 40)),
+)
+
+
+def _lab_marker(*, lab_id: str, state: ProgressState | None) -> str:
+    if state is None:
+        return "[ ]"
+    if lab_id in set(state.completed):
+        return "[x]"
+    if state.run_counts.get(lab_id, 0) > 0:
+        return "[>]"
+    return "[ ]"
+
+
+def _cmd_labs(state_file: Path | None) -> int:
+    state: ProgressState | None = None
+    state_path = state_file or DEFAULT_PROGRESS_PATH
+    if state_file is not None or state_path.exists():
+        try:
+            state = load_progress(state_path)
+        except (OSError, ValueError) as exc:
+            print(f"failed to load progress: {exc}")
+            return 1
+
+    by_num = {index: entry for index, entry in enumerate(LABS, start=1)}
+    for header, lab_nums in PHASE_GROUPS:
+        print(f"=== {header} ===")
+        for lab_num in lab_nums:
+            entry = by_num.get(lab_num)
+            if entry is None:
+                continue
+            marker = _lab_marker(lab_id=entry["id"], state=state)
+            short_id = f"lab{lab_num:02d}"
+            print(f"  {marker} {short_id}  {entry['title']}")
+        print()
     return 0
 
 
@@ -160,6 +215,46 @@ def _cmd_show(lab_id: str) -> int:
         return 0
     print(f"unknown lab: {lab_id}")
     return 1
+
+
+def _cmd_status(state_file: Path | None) -> int:
+    state_path = _resolve_state_file(state_file)
+    try:
+        state = load_progress(state_path)
+        rubric = load_assessment_rubric()
+    except (OSError, ValueError) as exc:
+        print(f"failed to load status: {exc}")
+        return 1
+
+    completed = set(state.completed)
+    highest_completed = next((entry for entry in reversed(LABS) if entry["id"] in completed), None)
+    next_unlocked_id = next(iter(unlocked_labs(state)), None)
+    next_unlocked = get_lab(next_unlocked_id) if next_unlocked_id is not None else None
+    assessment = evaluate_assessment(state, rubric)
+
+    failed_recent = [
+        entry["id"]
+        for entry in reversed(LABS)
+        if state.last_result.get(entry["id"]) == "FAIL"
+    ][:3]
+
+    if highest_completed is None:
+        print("position: none completed yet")
+    else:
+        print(f"position: {highest_completed['id']} ({highest_completed['title']}) - completed")
+
+    if next_unlocked is None:
+        print("next: none (all labs complete or blocked)")
+    else:
+        print(f"next: {next_unlocked['id']} ({next_unlocked['title']}) - unlocked")
+
+    print(f"score: {assessment.overall_score:.1f} / 100  band: {assessment.band}")
+    print(f"at_risk: {', '.join(failed_recent) if failed_recent else 'none'}")
+    if next_unlocked_id is not None:
+        print(f"run: routeforge check {next_unlocked_id}")
+    else:
+        print("run: routeforge report")
+    return 0
 
 
 def _parse_completed(values: list[str]) -> set[str]:
@@ -211,23 +306,24 @@ def _cmd_run(lab_id: str, completed_values: list[str], trace_out: Path | None, s
         return 3
 
     result = run_lab(lab_id)
-    if trace_out is not None:
-        trace_out.parent.mkdir(parents=True, exist_ok=True)
-        with trace_out.open("w", encoding="utf-8") as handle:
+    default_trace = Path(f"/tmp/{lab_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl")
+    out_path = trace_out if trace_out is not None else default_trace
+    should_write_trace = trace_out is not None or not result.passed
+    if should_write_trace:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with out_path.open("w", encoding="utf-8") as handle:
             for record in result.trace_records:
                 handle.write(json.dumps(record, sort_keys=True))
                 handle.write("\n")
-        print(f"trace written: {trace_out}")
+        print(f"trace written: {out_path}")
 
     print(f"running lab: {lab_id}")
-    default_trace = Path(f"/tmp/{lab_id}.jsonl")
     for step in result.steps:
         status = step.status or ("PASS" if step.passed else "FAIL")
         print(f"[{status}] {step.name}: {step.detail}")
         if not step.passed and status != "TODO":
             fired = ", ".join(step.outcome.checkpoints) if step.outcome.checkpoints else "none"
             print(f"       checkpoints fired: {fired}")
-            out_path = trace_out if trace_out is not None else default_trace
             print(f"       Debug: routeforge run {lab_id} --trace-out {out_path}")
             print(f"              routeforge debug explain --trace {out_path} --step {step.name}")
 
@@ -295,6 +391,17 @@ def _cmd_progress_reset(state_file: Path | None) -> int:
         print(f"failed to reset progress: {exc}")
         return 1
     print(f"progress reset: {state_path}")
+    return 0
+
+
+def _cmd_progress_migrate(state_file: Path | None) -> int:
+    state_path = _resolve_state_file(state_file)
+    try:
+        migrated = migrate_progress(state_path)
+    except (OSError, ValueError) as exc:
+        print(f"failed to migrate progress: {exc}")
+        return 1
+    print(f"progress migrated: {migrated} (version {PROGRESS_VERSION})")
     return 0
 
 
@@ -435,6 +542,17 @@ def _cmd_tdl_progress_reset(state_file: Path | None) -> int:
     return 0
 
 
+def _cmd_tdl_progress_migrate(state_file: Path | None) -> int:
+    state_path = _resolve_tdl_state_file(state_file)
+    try:
+        migrated = migrate_tdl_progress(state_path)
+    except (OSError, ValueError) as exc:
+        print(f"failed to migrate tdl progress: {exc}")
+        return 1
+    print(f"tdl progress migrated: {migrated} (version {TDL_PROGRESS_VERSION})")
+    return 0
+
+
 def _stage_for_target(target: str) -> tuple[int, str] | None:
     normalized = target.strip()
     if not normalized:
@@ -455,7 +573,20 @@ def _stage_for_target(target: str) -> tuple[int, str] | None:
     return None
 
 
-def _cmd_check(target: str) -> int:
+def _hint_lab_for_stage(stage_max: int) -> str:
+    index = max(1, min(stage_max, len(LABS))) - 1
+    return LABS[index]["id"]
+
+
+def _format_student_check_failures(result: StudentCheckRun) -> tuple[str, ...]:
+    lines: list[str] = []
+    for failure in result.failures:
+        step_name = failure.test_name.split("::")[-1]
+        lines.append(f"[FAIL] {step_name}: {failure.message}")
+    return tuple(lines)
+
+
+def _cmd_check(target: str, verbose: bool) -> int:
     stage_info = _stage_for_target(target)
     if stage_info is None:
         print(f"unknown check target: {target}")
@@ -465,7 +596,21 @@ def _cmd_check(target: str) -> int:
     stage_max, label = stage_info
     repo_root = Path(__file__).resolve().parents[2]
     print(f"running staged checks: target={label} stage_max={stage_max}")
-    return run_staged_student_checks(stage_max=stage_max, repo_root=repo_root)
+    result = run_staged_student_checks(stage_max=stage_max, repo_root=repo_root)
+    if verbose:
+        if result.raw_output:
+            print(result.raw_output)
+        return result.returncode
+
+    for line in _format_student_check_failures(result):
+        print(line)
+
+    hint_lab = _hint_lab_for_stage(stage_max)
+    if result.total > 0:
+        print(f"{result.passed} of {result.total} tests passed — run 'routeforge hint {hint_lab}' for contracts")
+    else:
+        print(f"0 tests discovered — run 'routeforge hint {hint_lab}' for contracts")
+    return result.returncode
 
 
 def _feature_coverage_counts(completed: set[str], *, matrix: object, level: str) -> tuple[int, int]:
@@ -497,6 +642,11 @@ def _cmd_report(state_file: Path | None, rubric_file: Path | None, json_out: Pat
     capstone_ready = len(missing_prereqs("lab27_capstone_incident_drill", completed)) == 0
     assessment = evaluate_assessment(state, rubric)
     remediation = _remediation_paths(assessment.at_risk_labs)
+    recommended_labs: list[str] = []
+    for lab_id in assessment.at_risk_labs:
+        for prereq in prerequisite_chain(lab_id):
+            if state.run_counts.get(prereq, 0) == 0 and prereq not in recommended_labs:
+                recommended_labs.append(prereq)
 
     labs_unlocked = ", ".join(unlocked) if unlocked else "none"
     capstone_ready_text = "yes" if capstone_ready else "no"
@@ -533,6 +683,10 @@ def _cmd_report(state_file: Path | None, rubric_file: Path | None, json_out: Pat
     print(f"assessment.band: {assessment.band}  ({band_note})")
     at_risk_text = ", ".join(at_risk_detail) if at_risk_detail else "none"
     print(f"assessment.at_risk_labs: {at_risk_text}")
+    print(
+        "assessment.recommended_labs: "
+        + (", ".join(recommended_labs) if recommended_labs else "none")
+    )
     print(f"assessment.remediation_docs: {', '.join(remediation) if remediation else 'none'}")
     print(f"assessment.next_step: {next_step}")
     print(f"capstone.ready: {capstone_ready_text}")
@@ -564,6 +718,7 @@ def _cmd_report(state_file: Path | None, rubric_file: Path | None, json_out: Pat
                 "total_weight": assessment.total_weight,
                 "weighted_earned": assessment.weighted_earned,
                 "at_risk_labs": list(assessment.at_risk_labs),
+                "recommended_labs": list(recommended_labs),
                 "remediation_docs": list(remediation),
             },
             "capstone_ready": capstone_ready,
@@ -580,7 +735,23 @@ def _cmd_report(state_file: Path | None, rubric_file: Path | None, json_out: Pat
     return 0
 
 
-def _cmd_hint(lab_id: str) -> int:
+def _symbol_impl_status(obj: object) -> str:
+    import inspect
+
+    try:
+        source = inspect.getsource(obj)
+        if "TODO(student)" in source or "raise NotImplementedError" in source:
+            return "TODO"
+    except Exception:
+        pass
+
+    doc = inspect.getdoc(obj) or ""
+    if "TODO(student)" in doc:
+        return "TODO"
+    return "done"
+
+
+def _cmd_hint(lab_id: str, symbol: str | None) -> int:
     import importlib
     import inspect
 
@@ -606,21 +777,42 @@ def _cmd_hint(lab_id: str) -> int:
     module_name = student_target.path.removeprefix("src/").removesuffix(".py").replace("/", ".")
     try:
         module = importlib.import_module(module_name)
-        for symbol in student_target.symbols:
-            parts = symbol.split(".")
+        selected_symbols = list(student_target.symbols)
+        if symbol is not None:
+            if symbol not in student_target.symbols:
+                print(f"  symbol not tracked for this lab: {symbol}")
+                return 1
+            selected_symbols = [symbol]
+        else:
+            print("symbol summary:")
+            for target_symbol in student_target.symbols:
+                parts = target_symbol.split(".")
+                obj: object = module
+                for part in parts:
+                    obj = getattr(obj, part, None)
+                    if obj is None:
+                        break
+                if obj is None:
+                    print(f"  [missing] {target_symbol}")
+                    continue
+                print(f"  [{_symbol_impl_status(obj)}] {target_symbol}")
+            print()
+
+        for target_symbol in selected_symbols:
+            parts = target_symbol.split(".")
             obj: object = module
             for part in parts:
                 obj = getattr(obj, part, None)
                 if obj is None:
                     break
             if obj is None:
-                print(f"  {symbol}: (not found in module)")
+                print(f"  {target_symbol}: (not found in module)")
                 continue
             try:
                 sig = inspect.signature(obj)
-                print(f"def {symbol}{sig}:")
+                print(f"def {target_symbol}{sig}:")
             except Exception:
-                print(f"def {symbol}(...):")
+                print(f"def {target_symbol}(...):")
             doc = inspect.getdoc(obj)
             if doc:
                 print(f'    """{doc}"""')
@@ -663,15 +855,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "labs":
-        return _cmd_labs()
+        return _cmd_labs(args.state_file)
+    if args.command == "status":
+        return _cmd_status(args.state_file)
     if args.command == "show":
         return _cmd_show(args.lab_id)
     if args.command == "hint":
-        return _cmd_hint(args.lab_id)
+        return _cmd_hint(args.lab_id, args.symbol)
     if args.command == "run":
         return _cmd_run(args.lab_id, args.completed, args.trace_out, args.state_file)
     if args.command == "check":
-        return _cmd_check(args.target)
+        return _cmd_check(args.target, args.verbose)
     if args.command == "progress":
         if args.progress_command == "show":
             return _cmd_progress_show(args.state_file)
@@ -679,6 +873,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_progress_mark(args.lab_id, args.state_file)
         if args.progress_command == "reset":
             return _cmd_progress_reset(args.state_file)
+        if args.progress_command == "migrate":
+            return _cmd_progress_migrate(args.state_file)
         parser.print_help()
         return 1
     if args.command == "tdl":
@@ -695,6 +891,8 @@ def main(argv: list[str] | None = None) -> int:
                 return _cmd_tdl_progress_show(args.state_file)
             if args.tdl_progress_command == "reset":
                 return _cmd_tdl_progress_reset(args.state_file)
+            if args.tdl_progress_command == "migrate":
+                return _cmd_tdl_progress_migrate(args.state_file)
             parser.print_help()
             return 1
         parser.print_help()

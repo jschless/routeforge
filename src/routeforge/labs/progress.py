@@ -10,6 +10,7 @@ from typing import Any
 from routeforge.labs.manifest import LABS, missing_prereqs
 
 DEFAULT_PROGRESS_PATH = Path(".routeforge_progress.json")
+CURRENT_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -23,7 +24,7 @@ class ProgressState:
 
 def _empty_state() -> ProgressState:
     return ProgressState(
-        version=1,
+        version=CURRENT_VERSION,
         completed=(),
         run_counts={},
         pass_counts={},
@@ -87,9 +88,25 @@ def load_progress(path: Path | None = None) -> ProgressState:
     if not isinstance(raw, dict):
         raise ValueError("progress root must be a mapping")
 
-    version = raw.get("version", 1)
+    version = raw.get("version")
+    if version is None:
+        print(
+            "warning: progress file has no version metadata; treating as legacy format. "
+            "Run 'routeforge progress migrate' to upgrade."
+        )
+        return _empty_state()
     if not isinstance(version, int):
         raise ValueError("progress.version must be an int")
+    if version < CURRENT_VERSION:
+        print(
+            f"warning: progress file version {version} is older than supported version {CURRENT_VERSION}. "
+            "Run 'routeforge progress migrate' to attempt upgrade."
+        )
+        return _empty_state()
+    if version > CURRENT_VERSION:
+        raise ValueError(
+            f"progress.version {version} is newer than this CLI supports ({CURRENT_VERSION})"
+        )
 
     return ProgressState(
         version=version,
@@ -173,3 +190,26 @@ def unlocked_labs(state: ProgressState) -> tuple[str, ...]:
         if not missing_prereqs(lab_id, completed):
             unlocked.append(lab_id)
     return tuple(unlocked)
+
+
+def migrate_progress(path: Path | None = None) -> Path:
+    progress_path = path or DEFAULT_PROGRESS_PATH
+    if not progress_path.exists():
+        return save_progress(_empty_state(), progress_path)
+
+    text = progress_path.read_text(encoding="utf-8")
+    if not text.strip():
+        return save_progress(_empty_state(), progress_path)
+
+    raw = json.loads(text)
+    if not isinstance(raw, dict):
+        raise ValueError("progress root must be a mapping")
+
+    migrated = ProgressState(
+        version=CURRENT_VERSION,
+        completed=_to_str_tuple(raw.get("completed", []), field_name="progress.completed"),
+        run_counts=_to_int_dict(raw.get("run_counts", {}), field_name="progress.run_counts"),
+        pass_counts=_to_int_dict(raw.get("pass_counts", {}), field_name="progress.pass_counts"),
+        last_result=_to_str_dict(raw.get("last_result", {}), field_name="progress.last_result"),
+    )
+    return save_progress(migrated, progress_path)
