@@ -158,6 +158,34 @@ def test_run_command_writes_trace(tmp_path) -> None:
     assert len(lines) == 2
 
 
+def test_run_command_shows_todo_for_not_implemented(monkeypatch, capsys) -> None:  # type: ignore[no-untyped-def]
+    from routeforge.labs import exercises as labs_exercises
+
+    def _raise_todo() -> None:
+        raise NotImplementedError("not yet implemented")
+
+    monkeypatch.setitem(labs_exercises.LAB_RUNNERS, "lab01_frame_and_headers", _raise_todo)
+    assert main(["run", "lab01_frame_and_headers"]) == 4
+    output = capsys.readouterr().out
+    assert "[TODO] implementation_todo:" in output
+    assert "routeforge hint lab01_frame_and_headers" in output
+    assert "checkpoints fired:" not in output
+
+
+def test_run_command_shows_contract_mismatch_for_type_errors(monkeypatch, capsys) -> None:  # type: ignore[no-untyped-def]
+    from routeforge.labs import exercises as labs_exercises
+
+    def _raise_type_error() -> None:
+        raise TypeError("wrong return object")
+
+    monkeypatch.setitem(labs_exercises.LAB_RUNNERS, "lab01_frame_and_headers", _raise_type_error)
+    assert main(["run", "lab01_frame_and_headers"]) == 4
+    output = capsys.readouterr().out
+    assert "[FAIL] implementation_contract_error:" in output
+    assert "step failed with TypeError" in output
+    assert "check your return type matches the function signature" in output
+
+
 def test_debug_replay_and_explain(tmp_path, capsys) -> None:
     trace = tmp_path / "trace.jsonl"
     assert main(["run", "lab01_frame_and_headers", "--trace-out", str(trace)]) == 0

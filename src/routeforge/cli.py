@@ -222,9 +222,9 @@ def _cmd_run(lab_id: str, completed_values: list[str], trace_out: Path | None, s
     print(f"running lab: {lab_id}")
     default_trace = Path(f"/tmp/{lab_id}.jsonl")
     for step in result.steps:
-        status = "PASS" if step.passed else "FAIL"
+        status = step.status or ("PASS" if step.passed else "FAIL")
         print(f"[{status}] {step.name}: {step.detail}")
-        if not step.passed:
+        if not step.passed and status != "TODO":
             fired = ", ".join(step.outcome.checkpoints) if step.outcome.checkpoints else "none"
             print(f"       checkpoints fired: {fired}")
             out_path = trace_out if trace_out is not None else default_trace
