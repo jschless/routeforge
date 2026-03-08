@@ -80,6 +80,18 @@ def _to_str_dict(value: Any, *, field_name: str) -> dict[str, str]:
     return out
 
 
+def _load_tdl_progress_state(raw: dict[str, Any]) -> TdlProgressState:
+    return TdlProgressState(
+        version=CURRENT_VERSION,
+        completed=_to_str_tuple(raw.get("completed", []), field_name="tdl.completed"),
+        total_xp=int(raw.get("total_xp", 0)),
+        badges=_to_str_tuple(raw.get("badges", []), field_name="tdl.badges"),
+        run_counts=_to_int_dict(raw.get("run_counts", {}), field_name="tdl.run_counts"),
+        pass_counts=_to_int_dict(raw.get("pass_counts", {}), field_name="tdl.pass_counts"),
+        last_result=_to_str_dict(raw.get("last_result", {}), field_name="tdl.last_result"),
+    )
+
+
 def load_tdl_progress(path: Path | None = None) -> TdlProgressState:
     progress_path = path or DEFAULT_TDL_PROGRESS_PATH
     if not progress_path.exists():
@@ -96,32 +108,25 @@ def load_tdl_progress(path: Path | None = None) -> TdlProgressState:
     version = raw.get("version")
     if version is None:
         print(
-            "warning: tdl progress file has no version metadata; treating as legacy format. "
-            "Run 'routeforge tdl progress migrate' to upgrade."
+            "warning: tdl progress file has no version metadata; loaded legacy state and will "
+            "upgrade it to the current format on next save. "
+            "Run 'routeforge tdl progress migrate' to rewrite it now."
         )
-        return _empty_state()
+        return _load_tdl_progress_state(raw)
     if not isinstance(version, int):
         raise ValueError("tdl progress.version must be an int")
     if version < CURRENT_VERSION:
         print(
-            f"warning: tdl progress file version {version} is older than supported version {CURRENT_VERSION}. "
-            "Run 'routeforge tdl progress migrate' to attempt upgrade."
+            f"warning: tdl progress file version {version} is older than supported version {CURRENT_VERSION}; "
+            "loaded legacy state and will upgrade it to the current format on next save. "
+            "Run 'routeforge tdl progress migrate' to rewrite it now."
         )
-        return _empty_state()
+        return _load_tdl_progress_state(raw)
     if version > CURRENT_VERSION:
         raise ValueError(
             f"tdl progress.version {version} is newer than this CLI supports ({CURRENT_VERSION})"
         )
-
-    return TdlProgressState(
-        version=version,
-        completed=_to_str_tuple(raw.get("completed", []), field_name="tdl.completed"),
-        total_xp=int(raw.get("total_xp", 0)),
-        badges=_to_str_tuple(raw.get("badges", []), field_name="tdl.badges"),
-        run_counts=_to_int_dict(raw.get("run_counts", {}), field_name="tdl.run_counts"),
-        pass_counts=_to_int_dict(raw.get("pass_counts", {}), field_name="tdl.pass_counts"),
-        last_result=_to_str_dict(raw.get("last_result", {}), field_name="tdl.last_result"),
-    )
+    return _load_tdl_progress_state(raw)
 
 
 def save_tdl_progress(state: TdlProgressState, path: Path | None = None) -> Path:
@@ -235,14 +240,8 @@ def migrate_tdl_progress(path: Path | None = None) -> Path:
     raw = json.loads(text)
     if not isinstance(raw, dict):
         raise ValueError("tdl progress root must be a mapping")
-
-    migrated = TdlProgressState(
-        version=CURRENT_VERSION,
-        completed=_to_str_tuple(raw.get("completed", []), field_name="tdl.completed"),
-        total_xp=int(raw.get("total_xp", 0)),
-        badges=_to_str_tuple(raw.get("badges", []), field_name="tdl.badges"),
-        run_counts=_to_int_dict(raw.get("run_counts", {}), field_name="tdl.run_counts"),
-        pass_counts=_to_int_dict(raw.get("pass_counts", {}), field_name="tdl.pass_counts"),
-        last_result=_to_str_dict(raw.get("last_result", {}), field_name="tdl.last_result"),
-    )
-    return save_tdl_progress(migrated, progress_path)
+    if isinstance(raw.get("version"), int) and raw["version"] > CURRENT_VERSION:
+        raise ValueError(
+            f"tdl progress.version {raw['version']} is newer than this CLI supports ({CURRENT_VERSION})"
+        )
+    return save_tdl_progress(_load_tdl_progress_state(raw), progress_path)

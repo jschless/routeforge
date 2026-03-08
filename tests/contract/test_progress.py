@@ -49,16 +49,48 @@ def test_apply_run_result_and_unlock_flow() -> None:
     assert unlocked_labs(state)[0] == "lab03_vlan_and_trunks"
 
 
-def test_load_legacy_progress_without_version_returns_empty(tmp_path, capsys) -> None:
+def test_load_legacy_progress_without_version_preserves_state(tmp_path, capsys) -> None:
     path = tmp_path / "legacy.json"
     path.write_text(
-        json.dumps({"completed": ["lab01_frame_and_headers"], "run_counts": {"lab01_frame_and_headers": 2}}),
+        json.dumps(
+            {
+                "completed": ["lab01_frame_and_headers"],
+                "run_counts": {"lab01_frame_and_headers": 2},
+                "pass_counts": {"lab01_frame_and_headers": 1},
+                "last_result": {"lab01_frame_and_headers": "PASS"},
+            }
+        ),
         encoding="utf-8",
     )
     state = load_progress(path)
     output = capsys.readouterr().out
-    assert "legacy format" in output
-    assert state.completed == ()
+    assert "loaded legacy state" in output
+    assert state.version == 1
+    assert state.completed == ("lab01_frame_and_headers",)
+    assert state.run_counts == {"lab01_frame_and_headers": 2}
+    assert state.pass_counts == {"lab01_frame_and_headers": 1}
+    assert state.last_result == {"lab01_frame_and_headers": "PASS"}
+
+
+def test_load_older_progress_version_preserves_state(tmp_path, capsys) -> None:
+    path = tmp_path / "older.json"
+    path.write_text(
+        json.dumps(
+            {
+                "version": 0,
+                "completed": ["lab01_frame_and_headers"],
+                "run_counts": {"lab01_frame_and_headers": 2},
+                "pass_counts": {"lab01_frame_and_headers": 1},
+                "last_result": {"lab01_frame_and_headers": "PASS"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = load_progress(path)
+    output = capsys.readouterr().out
+    assert "older than supported version" in output
+    assert state.version == 1
+    assert state.completed == ("lab01_frame_and_headers",)
 
 
 def test_migrate_progress_adds_current_version(tmp_path) -> None:

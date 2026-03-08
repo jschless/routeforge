@@ -45,7 +45,7 @@ class IPv4Header:
             IPv4Address(self.dst_ip)
         except ValueError:
             errors.append(L3_INVALID_DST_IP)
-        if self.ttl < 1:
+        if self.ttl <= 1:
             errors.append(L3_INVALID_TTL)
         return errors
 
@@ -57,6 +57,17 @@ class EthernetFrame:
     ethertype: int
     payload: IPv4Header
     vlan_id: int | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.ethertype, int) or isinstance(self.ethertype, bool):
+            raise ValueError("ethertype must be an int in range 0..65535")
+        if not 0 <= self.ethertype <= 65535:
+            raise ValueError("ethertype must be in range 0..65535")
+        if self.vlan_id is not None:
+            if not isinstance(self.vlan_id, int) or isinstance(self.vlan_id, bool):
+                raise ValueError("vlan_id must be None or an int in range 1..4094")
+            if not 1 <= self.vlan_id <= 4094:
+                raise ValueError("vlan_id must be None or in range 1..4094")
 
     def normalized(self) -> EthernetFrame:
         return EthernetFrame(
@@ -79,9 +90,6 @@ class EthernetFrame:
 
         if frame.ethertype != ETHERTYPE_IPV4:
             errors.append(L2_UNSUPPORTED_ETHERTYPE)
-
-        if frame.vlan_id is not None and frame.vlan_id < 1:
-            errors.append(L2_INVALID_VLAN)
 
         errors.extend(frame.payload.validate())
         return errors

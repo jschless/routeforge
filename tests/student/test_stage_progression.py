@@ -102,6 +102,31 @@ def test_stage01_edge_mac_and_ipv4_validation() -> None:
     assert "L3_INVALID_DST_IP" in errors
     assert "L3_INVALID_TTL" in errors
 
+    ttl_one = EthernetFrame(
+        src_mac="00:11:22:33:44:55",
+        dst_mac="00:11:22:33:44:66",
+        ethertype=ETHERTYPE_IPV4,
+        payload=IPv4Header(src_ip="192.0.2.1", dst_ip="192.0.2.2", ttl=1),
+    )
+    assert "L3_INVALID_TTL" in ttl_one.validate()
+
+    with pytest.raises(ValueError):
+        EthernetFrame(
+            src_mac="00:11:22:33:44:55",
+            dst_mac="00:11:22:33:44:66",
+            ethertype=70000,
+            payload=IPv4Header(src_ip="192.0.2.1", dst_ip="192.0.2.2", ttl=64),
+        )
+
+    with pytest.raises(ValueError):
+        EthernetFrame(
+            src_mac="00:11:22:33:44:55",
+            dst_mac="00:11:22:33:44:66",
+            ethertype=ETHERTYPE_IPV4,
+            payload=IPv4Header(src_ip="192.0.2.1", dst_ip="192.0.2.2", ttl=64),
+            vlan_id=4095,
+        )
+
 
 @pytest.mark.stage(2)
 def test_stage02_forwarding_plan_decisions() -> None:
