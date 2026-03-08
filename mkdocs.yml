@@ -14,7 +14,14 @@ nav:
   - Home: index.md
   - Getting Started: getting_started.md
   - Debug Playbook: debug_playbook.md
-  - TDL Side Quests: tdl.md
+  - TDL Side Quests:
+      - Overview: tdl.md
+      - Automation: tdl/automation.md
+      - Multicast: tdl/multicast.md
+      - Wireless: tdl/wireless.md
+      - Routing: tdl/routing.md
+      - MPLS: tdl/mpls.md
+      - Resiliency: tdl/resiliency.md
   - Student Task Map: student_task_map.md
   - Function Contracts: function_contracts.md
   - Architecture:

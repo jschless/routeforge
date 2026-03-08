@@ -207,6 +207,13 @@ def run_spf(graph: dict[str, list[tuple[str, int]]], *, root_router_id: str) -> 
     and ``_dijkstra_relax`` above, and this will produce the correct
     ``SpfResult``.
 
+    The split into init + relax is deliberate: correctness lives in relax.
+    ``_dijkstra_init`` sets deterministic starting state (root cost 0, parent
+    map shape), while ``_dijkstra_relax`` is where candidate costs, parent
+    updates, and strict tie behavior are enforced. If relax is wrong, SPF can
+    appear to work on small graphs but fail on tie-break or alternate-path
+    scenarios.
+
     ``graph`` maps each router_id to a list of ``(neighbor_router_id, link_cost)``
     adjacencies.  The heap tuple is ``(cost, router_id)`` so Python's
     ``heapq`` breaks cost ties by router_id string (lexicographically smaller

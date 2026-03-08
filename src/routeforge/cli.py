@@ -233,6 +233,8 @@ def _cmd_show(lab_id: str) -> int:
             print(f"student.symbols: {symbols}")
             print(f"student.signatures: {signatures}")
             print(f"student.summary: {student_target.summary}")
+            if student_target.prereq_reason:
+                print(f"student.prereq_reason: {student_target.prereq_reason}")
         return 0
     print(f"unknown lab: {lab_id}")
     return 1

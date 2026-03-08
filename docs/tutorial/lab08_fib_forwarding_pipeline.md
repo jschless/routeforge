@@ -81,3 +81,12 @@ Checkpoint guide:
 - RFC 792 (ICMP).
 - RFC 826 (ARP).
 
+## Concept Deepening Notes
+
+FIB behavior should separate selection from disposition. First determine whether a route exists and what next hop/interface it implies; then apply TTL and drop policy. Keeping this split clear makes ICMP and diagnostics labs easier because each control response can map to a specific forwarding-stage decision.
+
+## Checkpoint Guide (Expanded)
+
+- `TTL_DECREMENT`: Confirm this marker appears when your implementation follows the intended decision path.
+- `FIB_FORWARD`: Confirm this marker appears when your implementation follows the intended decision path.
+- `FIB_DROP`: Confirm this marker appears when your implementation follows the intended decision path.

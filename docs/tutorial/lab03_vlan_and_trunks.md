@@ -90,3 +90,16 @@ Checkpoint guide:
 
 - IEEE 802.1D (bridging and STP fundamentals).
 - IEEE 802.1Q (VLAN tagging and trunk behavior).
+
+## Concept Deepening Notes
+
+VLAN logic is a domain boundary between broadcast segments. In this lab, correctness is not just whether traffic forwards, but whether tags are transformed correctly at access/trunk edges. Think of ingress classification and egress rewrite as separate phases: classify first, then apply deterministic tag push/pop by port mode.
+
+## Checkpoint Guide (Expanded)
+
+- `PARSE_OK`: Confirm this marker appears when your implementation follows the intended decision path.
+- `VLAN_CLASSIFY`: Confirm this marker appears when your implementation follows the intended decision path.
+- `MAC_LEARN`: Confirm this marker appears when your implementation follows the intended decision path.
+- `L2_FLOOD`: Confirm this marker appears when your implementation follows the intended decision path.
+- `VLAN_TAG_PUSH`: Confirm this marker appears when your implementation follows the intended decision path.
+- `VLAN_TAG_POP`: Confirm this marker appears when your implementation follows the intended decision path.

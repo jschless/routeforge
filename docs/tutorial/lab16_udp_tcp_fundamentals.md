@@ -88,3 +88,13 @@ Checkpoint guide:
 
 - RFC 768 (UDP).
 - RFC 9293 (TCP core behavior, obsoletes RFC 793).
+
+## Concept Deepening Notes
+
+Transport fundamentals in RouteForge are contract-first. Flow classification defines stable identity, TCP FSM tracks legal transitions, and UDP validation enforces minimum header sanity. Treat these as separate concerns so transport behavior remains explainable when BGP session logic starts consuming TCP outcomes.
+
+## Checkpoint Guide (Expanded)
+
+- `FLOW_CLASSIFY`: Confirm this marker appears when your implementation follows the intended decision path.
+- `TCP_STATE_CHANGE`: Confirm this marker appears when your implementation follows the intended decision path.
+- `UDP_VALIDATE`: Confirm this marker appears when your implementation follows the intended decision path.

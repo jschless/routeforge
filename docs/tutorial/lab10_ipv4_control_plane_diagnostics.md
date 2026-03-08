@@ -80,3 +80,11 @@ Checkpoint guide:
 - RFC 792 (ICMP).
 - RFC 826 (ARP).
 
+## Concept Deepening Notes
+
+Diagnostics convert internal decisions into operator-facing explanations. In this lab, correctness means explanation output stays aligned with drop reason contracts. Treat explain output as a stable API: if your forwarding logic evolves, this boundary should still emit deterministic, parseable reason content.
+
+## Checkpoint Guide (Expanded)
+
+- `EXPLAIN_CHECKPOINT`: Confirm this marker appears when your implementation follows the intended decision path.
+- `DROP_REASON_ASSERT`: Confirm this marker appears when your implementation follows the intended decision path.

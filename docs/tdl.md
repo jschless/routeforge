@@ -32,6 +32,15 @@ TDL challenges span six domains that extend beyond the core curriculum:
 
 ## Domain Primers
 
+Full per-domain primers:
+
+- [Automation Primer](tdl/automation.md)
+- [Multicast Primer](tdl/multicast.md)
+- [Wireless Primer](tdl/wireless.md)
+- [Routing Primer](tdl/routing.md)
+- [MPLS Primer](tdl/mpls.md)
+- [Resiliency Primer](tdl/resiliency.md)
+
 ### Automation
 
 Automation missions model network configuration as structured data, not CLI text.

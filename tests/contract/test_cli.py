@@ -22,6 +22,13 @@ def test_show_command_includes_conformance(capsys) -> None:
     assert "student.signatures:" in output
 
 
+def test_show_command_includes_prereq_reason_when_present(capsys) -> None:
+    assert main(["show", "lab02_mac_learning_switch"]) == 0
+    output = capsys.readouterr().out
+    assert "student.prereq_reason:" in output
+    assert "Requires lab01_frame_and_headers" in output
+
+
 def test_run_command_blocks_unmet_prereqs(capsys) -> None:
     assert main(["run", "lab02_mac_learning_switch"]) == 2
     output = capsys.readouterr().out

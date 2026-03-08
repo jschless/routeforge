@@ -84,3 +84,13 @@ Checkpoint guide:
 - RFC 2474 / RFC 2475 (DiffServ marking and QoS service model).
 - RFC 4301 (IPsec architecture).
 
+## Concept Deepening Notes
+
+Stateful NAT requires bidirectional consistency across session lifecycle states. Outbound translation should create or reuse deterministic state, inbound translation should resolve through that state, and expiry should remove stale entries predictably. Most bugs come from asymmetric handling between outbound and return paths.
+
+## Checkpoint Guide (Expanded)
+
+- `NAT_SESSION_CREATE`: Confirm this marker appears when your implementation follows the intended decision path.
+- `NAT_TRANSLATE_OUTBOUND`: Confirm this marker appears when your implementation follows the intended decision path.
+- `NAT_TRANSLATE_INBOUND`: Confirm this marker appears when your implementation follows the intended decision path.
+- `NAT_SESSION_EXPIRE`: Confirm this marker appears when your implementation follows the intended decision path.

@@ -118,3 +118,11 @@ Checkpoint guide:
 
 - RFC 4271 (BGP-4).
 
+## Concept Deepening Notes
+
+BGP session control is FSM-driven and transport-dependent. OPEN handling and state transitions should be deterministic for equivalent event sequences. This lab sets the control-plane baseline for all later BGP policy and scaling work, so stable transition semantics matter more than protocol breadth.
+
+## Checkpoint Guide (Expanded)
+
+- `BGP_OPEN_RX`: Confirm this marker appears when your implementation follows the intended decision path.
+- `BGP_SESSION_CHANGE`: Confirm this marker appears when your implementation follows the intended decision path.

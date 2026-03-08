@@ -131,3 +131,14 @@ Checkpoint guide:
 - IEEE 802.1D (bridging and STP fundamentals).
 - IEEE 802.1Q (VLAN tagging and trunk behavior).
 
+## Concept Deepening Notes
+
+MAC learning is a stateful optimization layered on top of flooding defaults. Unknown unicast handling should be conservative (flood to non-ingress ports), then become precise once source learning populates the table. Deterministic behavior depends on stable update order and clear same-port handling to avoid loops and misleading test outcomes.
+
+## Checkpoint Guide (Expanded)
+
+- `PARSE_OK`: Confirm this marker appears when your implementation follows the intended decision path.
+- `VLAN_CLASSIFY`: Confirm this marker appears when your implementation follows the intended decision path.
+- `MAC_LEARN`: Confirm this marker appears when your implementation follows the intended decision path.
+- `L2_FLOOD`: Confirm this marker appears when your implementation follows the intended decision path.
+- `L2_UNICAST_FORWARD`: Confirm this marker appears when your implementation follows the intended decision path.

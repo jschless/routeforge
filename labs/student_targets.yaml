@@ -1,295 +1,342 @@
 version: 1
-as_of: "2026-03-07"
-
+as_of: '2026-03-07'
 targets:
-  - lab_id: lab01_frame_and_headers
-    stage: 1
-    path: src/routeforge/model/packet.py
-    symbols:
-      - is_valid_mac
-      - IPv4Header.validate
-      - EthernetFrame.validate
-    summary: Validate Ethernet and IPv4 header fields.
-
-  - lab_id: lab02_mac_learning_switch
-    stage: 2
-    path: src/routeforge/runtime/dataplane_sim.py
-    symbols:
-      - DataplaneSim._determine_forwarding_plan
-    summary: Build deterministic L2 forwarding plans for flood, known-unicast, and same-port drops.
-
-  - lab_id: lab03_vlan_and_trunks
-    stage: 3
-    path: src/routeforge/runtime/dataplane_sim.py
-    symbols:
-      - DataplaneSim._determine_egress_vlan_plan
-    summary: Compute deterministic egress VLAN admission/tag rewrite plans for trunk and access ports.
-
-  - lab_id: lab04_stp
-    stage: 4
-    path: src/routeforge/runtime/stp.py
-    symbols:
-      - compute_stp
-    summary: Compute deterministic STP root and port roles.
-
-  - lab_id: lab05_stp_convergence_and_protection
-    stage: 5
-    path: src/routeforge/runtime/stp.py
-    symbols:
-      - role_changes
-      - bpdu_guard_decision
-    summary: Identify STP role transitions on reconvergence and enforce BPDU guard on edge ports.
-
-  - lab_id: lab06_arp_and_adjacency
-    stage: 6
-    path: src/routeforge/runtime/adjacency.py
-    symbols:
-      - ArpAdjacencyTable.queue_packet
-      - ArpAdjacencyTable.resolve
-    summary: Queue packets on ARP miss and release them deterministically when adjacency resolves.
-
-  - lab_id: lab07_ipv4_subnet_and_rib
-    stage: 7
-    path: src/routeforge/runtime/l3.py
-    symbols:
-      - RibTable.lookup
-    summary: Perform deterministic LPM route lookup.
-
-  - lab_id: lab08_fib_forwarding_pipeline
-    stage: 8
-    path: src/routeforge/runtime/l3.py
-    symbols:
-      - forward_packet
-    summary: Build forwarding/drop decisions with TTL handling.
-
-  - lab_id: lab09_icmp_and_control_responses
-    stage: 9
-    path: src/routeforge/runtime/l3.py
-    symbols:
-      - icmp_control
-    summary: Generate ICMP control-plane responses for echo, no-route, and TTL expiry.
-
-  - lab_id: lab10_ipv4_control_plane_diagnostics
-    stage: 10
-    path: src/routeforge/runtime/l3.py
-    symbols:
-      - explain_drop
-    summary: Explain deterministic drop reasons for diagnostics.
-
-  - lab_id: lab11_ospf_adjacency_fsm
-    stage: 11
-    path: src/routeforge/runtime/ospf.py
-    symbols:
-      - neighbor_hello_transition
-    summary: Advance OSPF neighbor state machine on hello/dead events.
-
-  - lab_id: lab12_ospf_network_types_and_dr_bdr
-    stage: 12
-    path: src/routeforge/runtime/ospf.py
-    symbols:
-      - _election_order
-      - failover_dr_bdr
-    summary: Order DR/BDR candidates deterministically and re-elect after active-node loss.
-
-  - lab_id: lab13_ospf_lsa_flooding_and_lsdb
-    stage: 13
-    path: src/routeforge/runtime/ospf.py
-    symbols:
-      - Lsdb.age_tick
-    summary: Age LSAs and remove max-age entries.
-
-  - lab_id: lab14_ospf_spf_and_route_install
-    stage: 14
-    path: src/routeforge/runtime/ospf.py
-    symbols:
-      - run_spf
-    summary: Compute deterministic SPF costs and parents.
-
-  - lab_id: lab15_ospf_multi_area_abr
-    stage: 15
-    path: src/routeforge/runtime/ospf.py
-    symbols:
-      - originate_summaries
-    summary: Produce inter-area summary routes.
-
-  - lab_id: lab16_udp_tcp_fundamentals
-    stage: 16
-    path: src/routeforge/runtime/transport.py
-    symbols:
-      - classify_flow
-      - validate_udp
-    summary: Normalize transport flow keys and validate UDP length/checksum constraints.
-
-  - lab_id: lab17_bfd_for_liveness
-    stage: 17
-    path: src/routeforge/runtime/bfd.py
-    symbols:
-      - BfdSession.tick
-    summary: Detect BFD timeout behavior deterministically.
-
-  - lab_id: lab18_acl_pipeline
-    stage: 18
-    path: src/routeforge/runtime/policy_acl.py
-    symbols:
-      - evaluate_acl
-    summary: Evaluate ACLs with first-match semantics.
-
-  - lab_id: lab19_nat44_stateful_translation
-    stage: 19
-    path: src/routeforge/runtime/nat44.py
-    symbols:
-      - Nat44Table.inbound_translate
-    summary: Translate return traffic using NAT session state.
-
-  - lab_id: lab20_qos_marking_and_queueing
-    stage: 20
-    path: src/routeforge/runtime/qos.py
-    symbols:
-      - QosEngine.dequeue
-    summary: Dequeue packets using deterministic scheduler order.
-
-  - lab_id: lab21_bgp_session_fsm_and_transport
-    stage: 21
-    path: src/routeforge/runtime/bgp.py
-    symbols:
-      - bgp_session_transition
-    summary: Drive BGP session FSM transitions.
-
-  - lab_id: lab22_bgp_attributes_and_bestpath
-    stage: 22
-    path: src/routeforge/runtime/bgp.py
-    symbols:
-      - select_best_path
-    summary: Select deterministic BGP best path from candidates.
-
-  - lab_id: lab23_bgp_policy_and_filters
-    stage: 23
-    path: src/routeforge/runtime/bgp.py
-    symbols:
-      - apply_export_policy
-    summary: Apply outbound policy filters and attribute rewrites.
-
-  - lab_id: lab24_bgp_scaling_patterns
-    stage: 24
-    path: src/routeforge/runtime/bgp.py
-    symbols:
-      - route_reflect
-    summary: Reflect client routes to non-originating clients.
-
-  - lab_id: lab25_tunnels_and_ipsec
-    stage: 25
-    path: src/routeforge/runtime/tunnel_ipsec.py
-    symbols:
-      - evaluate_ipsec_policy
-    summary: Classify flows as PROTECT or BYPASS by prefix policy.
-
-  - lab_id: lab26_observability_and_ops
-    stage: 26
-    path: src/routeforge/runtime/observability.py
-    symbols:
-      - readiness_check
-      - emit_telemetry
-    summary: Compute deterministic readiness failures and emit stable telemetry payloads.
-
-  - lab_id: lab27_capstone_incident_drill
-    stage: 27
-    path: src/routeforge/runtime/capstone.py
-    symbols:
-      - apply_step
-    summary: Apply incident/recovery state transitions deterministically.
-
-  - lab_id: lab28_dhcp_snooping_and_dai
-    stage: 28
-    path: src/routeforge/runtime/security.py
-    symbols:
-      - learn_binding_if_trusted
-      - dhcp_snooping_dai
-    summary: Learn trusted DHCP bindings and enforce deterministic DAI validation.
-
-  - lab_id: lab29_port_security_and_ip_source_guard
-    stage: 29
-    path: src/routeforge/runtime/security.py
-    symbols:
-      - update_secure_mac_table
-      - port_security_ip_source_guard
-    summary: Update secure-MAC learning state and apply IP source guard outcomes.
-
-  - lab_id: lab30_qos_policing_and_shaping
-    stage: 30
-    path: src/routeforge/runtime/qos_advanced.py
-    symbols:
-      - apply_policer
-      - qos_police_shape
-    summary: Apply CIR policing first, then deterministic shaping release behavior.
-
-  - lab_id: lab31_qos_congestion_avoidance_wred
-    stage: 31
-    path: src/routeforge/runtime/qos_advanced.py
-    symbols:
-      - wred_decision_profile
-      - qos_wred_decision
-    summary: Classify WRED threshold profile and emit deterministic FORWARD/MARK/DROP actions.
-
-  - lab_id: lab32_route_redistribution_and_loop_prevention
-    stage: 32
-    path: src/routeforge/runtime/routing_policy.py
-    symbols:
-      - build_redistribution_tag
-      - redistribute_with_loop_guard
-    summary: Build canonical redistribution tags and suppress looped re-imports.
-
-  - lab_id: lab33_fhrp_tracking_and_failover
-    stage: 33
-    path: src/routeforge/runtime/routing_policy.py
-    symbols:
-      - tracked_object_result
-      - fhrp_track_failover
-    summary: Derive tracked-object state and select deterministic active/standby roles.
-
-  - lab_id: lab34_ipv6_nd_slaac_and_ra_guard
-    stage: 34
-    path: src/routeforge/runtime/ipv6.py
-    symbols:
-      - derive_slaac_host_id
-      - ipv6_nd_slaac_ra_guard
-    summary: Derive stable SLAAC host IDs and enforce RA guard decisions.
-
-  - lab_id: lab35_ospfv3_adjacency_and_lsdb
-    stage: 35
-    path: src/routeforge/runtime/ipv6.py
-    symbols:
-      - ospfv3_neighbor_result
-      - ospfv3_adjacency_lsdb
-    summary: Derive OSPFv3 adjacency state and install LSAs into LSDB snapshots.
-
-  - lab_id: lab36_mpbgp_ipv6_unicast
-    stage: 36
-    path: src/routeforge/runtime/ipv6.py
-    symbols:
-      - rank_mpbgp_path
-      - mpbgp_ipv6_unicast
-    summary: Build deterministic MP-BGP ranking keys and select best IPv6 path.
-
-  - lab_id: lab37_mpls_ldp_label_forwarding
-    stage: 37
-    path: src/routeforge/runtime/mpls.py
-    symbols:
-      - lfib_mapping
-      - mpls_ldp_lfib
-    summary: Build LFIB mappings and return deterministic MPLS label forwarding tuples.
-
-  - lab_id: lab38_l3vpn_vrf_and_route_targets
-    stage: 38
-    path: src/routeforge/runtime/mpls.py
-    symbols:
-      - vrf_import_action
-      - l3vpn_vrf_route_targets
-    summary: Derive VRF route-target import action and emit IMPORT/REJECT outcomes.
-
-  - lab_id: lab39_bgp_evpn_vxlan_basics
-    stage: 39
-    path: src/routeforge/runtime/mpls.py
-    symbols:
-      - evpn_type2_entry
-      - evpn_vxlan_control
-    summary: Build EVPN type-2 keys and install MAC/IP entries only for known VNIs.
+- lab_id: lab01_frame_and_headers
+  stage: 1
+  path: src/routeforge/model/packet.py
+  symbols:
+  - is_valid_mac
+  - IPv4Header.validate
+  - EthernetFrame.validate
+  summary: Validate Ethernet and IPv4 header fields.
+- lab_id: lab02_mac_learning_switch
+  stage: 2
+  path: src/routeforge/runtime/dataplane_sim.py
+  symbols:
+  - DataplaneSim._determine_forwarding_plan
+  summary: Build deterministic L2 forwarding plans for flood, known-unicast, and same-port
+    drops.
+  prereq_reason: 'Requires lab01_frame_and_headers: this lab extends concepts from
+    ''Frame and Header Validation'' and assumes that contract is already stable.'
+- lab_id: lab03_vlan_and_trunks
+  stage: 3
+  path: src/routeforge/runtime/dataplane_sim.py
+  symbols:
+  - DataplaneSim._determine_egress_vlan_plan
+  summary: Compute deterministic egress VLAN admission/tag rewrite plans for trunk
+    and access ports.
+  prereq_reason: 'Requires lab02_mac_learning_switch: this lab extends concepts from
+    ''MAC Learning Switch'' and assumes that contract is already stable.'
+- lab_id: lab04_stp
+  stage: 4
+  path: src/routeforge/runtime/stp.py
+  symbols:
+  - compute_stp
+  summary: Compute deterministic STP root and port roles.
+  prereq_reason: 'Requires lab03_vlan_and_trunks: this lab extends concepts from ''VLAN
+    and Trunks'' and assumes that contract is already stable.'
+- lab_id: lab05_stp_convergence_and_protection
+  stage: 5
+  path: src/routeforge/runtime/stp.py
+  symbols:
+  - role_changes
+  - bpdu_guard_decision
+  summary: Identify STP role transitions on reconvergence and enforce BPDU guard on
+    edge ports.
+  prereq_reason: 'Requires lab04_stp: this lab extends concepts from ''Spanning Tree''
+    and assumes that contract is already stable.'
+- lab_id: lab06_arp_and_adjacency
+  stage: 6
+  path: src/routeforge/runtime/adjacency.py
+  symbols:
+  - ArpAdjacencyTable.queue_packet
+  - ArpAdjacencyTable.resolve
+  summary: Queue packets on ARP miss and release them deterministically when adjacency
+    resolves.
+  prereq_reason: 'Requires lab05_stp_convergence_and_protection: this lab extends
+    concepts from ''STP Convergence and Protection'' and assumes that contract is
+    already stable.'
+- lab_id: lab07_ipv4_subnet_and_rib
+  stage: 7
+  path: src/routeforge/runtime/l3.py
+  symbols:
+  - RibTable.lookup
+  summary: Perform deterministic LPM route lookup.
+  prereq_reason: 'Requires lab06_arp_and_adjacency: this lab extends concepts from
+    ''ARP and Adjacency'' and assumes that contract is already stable.'
+- lab_id: lab08_fib_forwarding_pipeline
+  stage: 8
+  path: src/routeforge/runtime/l3.py
+  symbols:
+  - forward_packet
+  summary: Build forwarding/drop decisions with TTL handling.
+  prereq_reason: 'Requires lab07_ipv4_subnet_and_rib: this lab extends concepts from
+    ''IPv4 Subnet and RIB'' and assumes that contract is already stable.'
+- lab_id: lab09_icmp_and_control_responses
+  stage: 9
+  path: src/routeforge/runtime/l3.py
+  symbols:
+  - icmp_control
+  summary: Generate ICMP control-plane responses for echo, no-route, and TTL expiry.
+  prereq_reason: 'Requires lab08_fib_forwarding_pipeline: this lab extends concepts
+    from ''FIB Forwarding Pipeline'' and assumes that contract is already stable.'
+- lab_id: lab10_ipv4_control_plane_diagnostics
+  stage: 10
+  path: src/routeforge/runtime/l3.py
+  symbols:
+  - explain_drop
+  summary: Explain deterministic drop reasons for diagnostics.
+  prereq_reason: 'Requires lab09_icmp_and_control_responses: this lab extends concepts
+    from ''ICMP and Control Responses'' and assumes that contract is already stable.'
+- lab_id: lab11_ospf_adjacency_fsm
+  stage: 11
+  path: src/routeforge/runtime/ospf.py
+  symbols:
+  - neighbor_hello_transition
+  summary: Advance OSPF neighbor state machine on hello/dead events.
+  prereq_reason: 'Requires lab10_ipv4_control_plane_diagnostics: this lab extends
+    concepts from ''IPv4 Diagnostics'' and assumes that contract is already stable.'
+- lab_id: lab12_ospf_network_types_and_dr_bdr
+  stage: 12
+  path: src/routeforge/runtime/ospf.py
+  symbols:
+  - _election_order
+  - failover_dr_bdr
+  summary: Order DR/BDR candidates deterministically and re-elect after active-node
+    loss.
+  prereq_reason: 'Requires lab11_ospf_adjacency_fsm: this lab extends concepts from
+    ''OSPF Adjacency FSM'' and assumes that contract is already stable.'
+- lab_id: lab13_ospf_lsa_flooding_and_lsdb
+  stage: 13
+  path: src/routeforge/runtime/ospf.py
+  symbols:
+  - Lsdb.age_tick
+  summary: Age LSAs and remove max-age entries.
+  prereq_reason: 'Requires lab12_ospf_network_types_and_dr_bdr: this lab extends concepts
+    from ''OSPF Network Types and DR/BDR'' and assumes that contract is already stable.'
+- lab_id: lab14_ospf_spf_and_route_install
+  stage: 14
+  path: src/routeforge/runtime/ospf.py
+  symbols:
+  - run_spf
+  summary: Compute deterministic SPF costs and parents.
+  prereq_reason: 'Requires lab13_ospf_lsa_flooding_and_lsdb: this lab extends concepts
+    from ''OSPF LSA Flooding and LSDB'' and assumes that contract is already stable.'
+- lab_id: lab15_ospf_multi_area_abr
+  stage: 15
+  path: src/routeforge/runtime/ospf.py
+  symbols:
+  - originate_summaries
+  summary: Produce inter-area summary routes.
+  prereq_reason: 'Requires lab14_ospf_spf_and_route_install: this lab extends concepts
+    from ''OSPF SPF and Route Install'' and assumes that contract is already stable.'
+- lab_id: lab16_udp_tcp_fundamentals
+  stage: 16
+  path: src/routeforge/runtime/transport.py
+  symbols:
+  - classify_flow
+  - validate_udp
+  summary: Normalize transport flow keys and validate UDP length/checksum constraints.
+  prereq_reason: 'Requires lab15_ospf_multi_area_abr: this lab extends concepts from
+    ''OSPF Multi-Area ABR'' and assumes that contract is already stable.'
+- lab_id: lab17_bfd_for_liveness
+  stage: 17
+  path: src/routeforge/runtime/bfd.py
+  symbols:
+  - BfdSession.tick
+  summary: Detect BFD timeout behavior deterministically.
+  prereq_reason: 'Requires lab16_udp_tcp_fundamentals: this lab extends concepts from
+    ''UDP/TCP Fundamentals'' and assumes that contract is already stable.'
+- lab_id: lab18_acl_pipeline
+  stage: 18
+  path: src/routeforge/runtime/policy_acl.py
+  symbols:
+  - evaluate_acl
+  summary: Evaluate ACLs with first-match semantics.
+  prereq_reason: 'Requires lab17_bfd_for_liveness: this lab extends concepts from
+    ''BFD for Liveness'' and assumes that contract is already stable.'
+- lab_id: lab19_nat44_stateful_translation
+  stage: 19
+  path: src/routeforge/runtime/nat44.py
+  symbols:
+  - Nat44Table.inbound_translate
+  summary: Translate return traffic using NAT session state.
+  prereq_reason: 'Requires lab18_acl_pipeline: this lab extends concepts from ''ACL
+    Pipeline'' and assumes that contract is already stable.'
+- lab_id: lab20_qos_marking_and_queueing
+  stage: 20
+  path: src/routeforge/runtime/qos.py
+  symbols:
+  - QosEngine.dequeue
+  summary: Dequeue packets using deterministic scheduler order.
+  prereq_reason: 'Requires lab19_nat44_stateful_translation: this lab extends concepts
+    from ''NAT44 Stateful Translation'' and assumes that contract is already stable.'
+- lab_id: lab21_bgp_session_fsm_and_transport
+  stage: 21
+  path: src/routeforge/runtime/bgp.py
+  symbols:
+  - bgp_session_transition
+  summary: Drive BGP session FSM transitions.
+  prereq_reason: 'Requires lab20_qos_marking_and_queueing: this lab extends concepts
+    from ''QoS Marking and Queueing'' and assumes that contract is already stable.'
+- lab_id: lab22_bgp_attributes_and_bestpath
+  stage: 22
+  path: src/routeforge/runtime/bgp.py
+  symbols:
+  - select_best_path
+  summary: Select deterministic BGP best path from candidates.
+  prereq_reason: 'Requires lab21_bgp_session_fsm_and_transport: this lab extends concepts
+    from ''BGP Session FSM and Transport'' and assumes that contract is already stable.'
+- lab_id: lab23_bgp_policy_and_filters
+  stage: 23
+  path: src/routeforge/runtime/bgp.py
+  symbols:
+  - apply_export_policy
+  summary: Apply outbound policy filters and attribute rewrites.
+  prereq_reason: 'Requires lab22_bgp_attributes_and_bestpath: this lab extends concepts
+    from ''BGP Attributes and Best Path'' and assumes that contract is already stable.'
+- lab_id: lab24_bgp_scaling_patterns
+  stage: 24
+  path: src/routeforge/runtime/bgp.py
+  symbols:
+  - route_reflect
+  summary: Reflect client routes to non-originating clients.
+  prereq_reason: 'Requires lab23_bgp_policy_and_filters: this lab extends concepts
+    from ''BGP Policy and Filters'' and assumes that contract is already stable.'
+- lab_id: lab25_tunnels_and_ipsec
+  stage: 25
+  path: src/routeforge/runtime/tunnel_ipsec.py
+  symbols:
+  - evaluate_ipsec_policy
+  summary: Classify flows as PROTECT or BYPASS by prefix policy.
+  prereq_reason: 'Requires lab24_bgp_scaling_patterns: this lab extends concepts from
+    ''BGP Scaling Patterns'' and assumes that contract is already stable.'
+- lab_id: lab26_observability_and_ops
+  stage: 26
+  path: src/routeforge/runtime/observability.py
+  symbols:
+  - readiness_check
+  - emit_telemetry
+  summary: Compute deterministic readiness failures and emit stable telemetry payloads.
+  prereq_reason: 'Requires lab25_tunnels_and_ipsec: this lab extends concepts from
+    ''Tunnels and IPsec'' and assumes that contract is already stable.'
+- lab_id: lab27_capstone_incident_drill
+  stage: 27
+  path: src/routeforge/runtime/capstone.py
+  symbols:
+  - apply_step
+  summary: Apply incident/recovery state transitions deterministically.
+  prereq_reason: 'Requires lab26_observability_and_ops: this lab extends concepts
+    from ''Observability and Operations'' and assumes that contract is already stable.'
+- lab_id: lab28_dhcp_snooping_and_dai
+  stage: 28
+  path: src/routeforge/runtime/security.py
+  symbols:
+  - learn_binding_if_trusted
+  - dhcp_snooping_dai
+  summary: Learn trusted DHCP bindings and enforce deterministic DAI validation.
+  prereq_reason: 'Requires lab27_capstone_incident_drill: this lab extends concepts
+    from ''Capstone Incident Drill'' and assumes that contract is already stable.'
+- lab_id: lab29_port_security_and_ip_source_guard
+  stage: 29
+  path: src/routeforge/runtime/security.py
+  symbols:
+  - update_secure_mac_table
+  - port_security_ip_source_guard
+  summary: Update secure-MAC learning state and apply IP source guard outcomes.
+  prereq_reason: 'Requires lab28_dhcp_snooping_and_dai: this lab extends concepts
+    from ''DHCP Snooping and DAI'' and assumes that contract is already stable.'
+- lab_id: lab30_qos_policing_and_shaping
+  stage: 30
+  path: src/routeforge/runtime/qos_advanced.py
+  symbols:
+  - apply_policer
+  - qos_police_shape
+  summary: Apply CIR policing first, then deterministic shaping release behavior.
+  prereq_reason: 'Requires lab29_port_security_and_ip_source_guard: this lab extends
+    concepts from ''Port Security and IP Source Guard'' and assumes that contract
+    is already stable.'
+- lab_id: lab31_qos_congestion_avoidance_wred
+  stage: 31
+  path: src/routeforge/runtime/qos_advanced.py
+  symbols:
+  - wred_decision_profile
+  - qos_wred_decision
+  summary: Classify WRED threshold profile and emit deterministic FORWARD/MARK/DROP
+    actions.
+  prereq_reason: 'Requires lab30_qos_policing_and_shaping: this lab extends concepts
+    from ''QoS Policing and Shaping'' and assumes that contract is already stable.'
+- lab_id: lab32_route_redistribution_and_loop_prevention
+  stage: 32
+  path: src/routeforge/runtime/routing_policy.py
+  symbols:
+  - build_redistribution_tag
+  - redistribute_with_loop_guard
+  summary: Build canonical redistribution tags and suppress looped re-imports.
+  prereq_reason: 'Requires lab31_qos_congestion_avoidance_wred: this lab extends concepts
+    from ''QoS Congestion Avoidance (WRED)'' and assumes that contract is already
+    stable.'
+- lab_id: lab33_fhrp_tracking_and_failover
+  stage: 33
+  path: src/routeforge/runtime/routing_policy.py
+  symbols:
+  - tracked_object_result
+  - fhrp_track_failover
+  summary: Derive tracked-object state and select deterministic active/standby roles.
+  prereq_reason: 'Requires lab32_route_redistribution_and_loop_prevention: this lab
+    extends concepts from ''Route Redistribution and Loop Prevention'' and assumes
+    that contract is already stable.'
+- lab_id: lab34_ipv6_nd_slaac_and_ra_guard
+  stage: 34
+  path: src/routeforge/runtime/ipv6.py
+  symbols:
+  - derive_slaac_host_id
+  - ipv6_nd_slaac_ra_guard
+  summary: Derive stable SLAAC host IDs and enforce RA guard decisions.
+  prereq_reason: 'Requires lab33_fhrp_tracking_and_failover: this lab extends concepts
+    from ''FHRP Tracking and Failover'' and assumes that contract is already stable.'
+- lab_id: lab35_ospfv3_adjacency_and_lsdb
+  stage: 35
+  path: src/routeforge/runtime/ipv6.py
+  symbols:
+  - ospfv3_neighbor_result
+  - ospfv3_adjacency_lsdb
+  summary: Derive OSPFv3 adjacency state and install LSAs into LSDB snapshots.
+  prereq_reason: 'Requires lab34_ipv6_nd_slaac_and_ra_guard: this lab extends concepts
+    from ''IPv6 ND, SLAAC, and RA Guard'' and assumes that contract is already stable.'
+- lab_id: lab36_mpbgp_ipv6_unicast
+  stage: 36
+  path: src/routeforge/runtime/ipv6.py
+  symbols:
+  - rank_mpbgp_path
+  - mpbgp_ipv6_unicast
+  summary: Build deterministic MP-BGP ranking keys and select best IPv6 path.
+  prereq_reason: 'Requires lab35_ospfv3_adjacency_and_lsdb: this lab extends concepts
+    from ''OSPFv3 Adjacency and LSDB'' and assumes that contract is already stable.'
+- lab_id: lab37_mpls_ldp_label_forwarding
+  stage: 37
+  path: src/routeforge/runtime/mpls.py
+  symbols:
+  - lfib_mapping
+  - mpls_ldp_lfib
+  summary: Build LFIB mappings and return deterministic MPLS label forwarding tuples.
+  prereq_reason: 'Requires lab36_mpbgp_ipv6_unicast: this lab extends concepts from
+    ''MP-BGP IPv6 Unicast'' and assumes that contract is already stable.'
+- lab_id: lab38_l3vpn_vrf_and_route_targets
+  stage: 38
+  path: src/routeforge/runtime/mpls.py
+  symbols:
+  - vrf_import_action
+  - l3vpn_vrf_route_targets
+  summary: Derive VRF route-target import action and emit IMPORT/REJECT outcomes.
+  prereq_reason: 'Requires lab37_mpls_ldp_label_forwarding: this lab extends concepts
+    from ''MPLS LDP and Label Forwarding'' and assumes that contract is already stable.'
+- lab_id: lab39_bgp_evpn_vxlan_basics
+  stage: 39
+  path: src/routeforge/runtime/mpls.py
+  symbols:
+  - evpn_type2_entry
+  - evpn_vxlan_control
+  summary: Build EVPN type-2 keys and install MAC/IP entries only for known VNIs.
+  prereq_reason: 'Requires lab38_l3vpn_vrf_and_route_targets: this lab extends concepts
+    from ''L3VPN VRF and Route Targets'' and assumes that contract is already stable.'

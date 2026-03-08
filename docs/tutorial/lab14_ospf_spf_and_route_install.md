@@ -138,3 +138,11 @@ Checkpoint guide:
 
 - RFC 2328 (OSPFv2).
 
+## Concept Deepening Notes
+
+SPF correctness depends on deterministic graph traversal and strict tie behavior. Cost/parent maps should be reproducible, then translated into route-install actions that preserve the computed path intent. If install logic diverges from SPF state, downstream forwarding appears correct for some prefixes but unstable for equivalent paths.
+
+## Checkpoint Guide (Expanded)
+
+- `OSPF_SPF_RUN`: Confirm this marker appears when your implementation follows the intended decision path.
+- `RIB_ROUTE_INSTALL`: Confirm this marker appears when your implementation follows the intended decision path.
