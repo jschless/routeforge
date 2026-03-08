@@ -242,6 +242,28 @@ def test_debug_replay_and_explain(tmp_path, capsys) -> None:
     assert "checkpoints: PARSE_DROP" in explain_out
 
 
+def test_debug_explain_checkpoint_filter_and_list(tmp_path, capsys) -> None:
+    trace = tmp_path / "trace.jsonl"
+    assert main(["run", "lab01_frame_and_headers", "--trace-out", str(trace)]) == 0
+    capsys.readouterr()
+
+    assert main(["debug", "explain", "--trace", str(trace), "--checkpoint", "PARSE_DROP"]) == 0
+    filtered = capsys.readouterr().out
+    assert "records: 1" in filtered
+    assert "PARSE_DROP" in filtered
+
+    assert main(["debug", "explain", "--trace", str(trace), "--list-checkpoints"]) == 0
+    listed = capsys.readouterr().out
+    assert "PARSE_OK" in listed
+    assert "PARSE_DROP" in listed
+
+
+def test_validate_targets_command_runs(capsys) -> None:
+    assert main(["validate-targets"]) == 0
+    output = capsys.readouterr().out
+    assert "student targets:" in output
+
+
 def test_progress_show_mark_reset_and_report(tmp_path, capsys) -> None:
     state = tmp_path / "progress.json"
     total_labs = len(LABS)

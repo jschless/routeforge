@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal, TypedDict
 
 
-class TdlEntry(TypedDict):
+class TdlEntry(TypedDict, total=False):
     id: str
     title: str
     domain: Literal["AUTOMATION", "MULTICAST", "WIRELESS", "ROUTING", "MPLS", "RESILIENCY"]
@@ -15,6 +15,7 @@ class TdlEntry(TypedDict):
     path: str
     symbols: list[str]
     summary: str
+    conformance_features: list[str]
 
 
 TDL_CHALLENGES: list[TdlEntry] = [
@@ -379,6 +380,26 @@ TDL_CHALLENGES: list[TdlEntry] = [
         "summary": "Classify control-plane incident severity from compounded signals.",
     },
 ]
+
+
+def _default_conformance_features(challenge_id: str) -> list[str]:
+    if challenge_id.startswith("tdl_auto_"):
+        return ["OPS_OBSERVABILITY", "CAPSTONE_INCIDENT_RECOVERY"]
+    if challenge_id.startswith("tdl_mcast_"):
+        return ["L3_FIB_FORWARD", "L3_DIAGNOSTICS"]
+    if challenge_id.startswith("tdl_wlan_"):
+        return ["L4_TCP_UDP_FOUNDATIONS", "SERVICE_QOS_MARK_QUEUE"]
+    if challenge_id.startswith("tdl_route_"):
+        return ["BGP_POLICY_FILTERS", "BGP_BESTPATH", "BGP_MULTIPATH"]
+    if challenge_id.startswith("tdl_mpls_"):
+        return ["MPLS_LDP_LFIB", "MPLS_L3VPN_VRF_RT", "MPLS_VRF_CORE"]
+    if challenge_id.startswith("tdl_res_"):
+        return ["BFD_SESSION_TIMERS", "L3_FHRP_FAILOVER", "OSPF_NEIGHBOR_FSM"]
+    return []
+
+
+for _entry in TDL_CHALLENGES:
+    _entry.setdefault("conformance_features", _default_conformance_features(_entry["id"]))
 
 
 def get_tdl_challenge(challenge_id: str) -> TdlEntry | None:

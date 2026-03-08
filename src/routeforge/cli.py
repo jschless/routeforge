@@ -8,13 +8,17 @@ import json
 from pathlib import Path
 import re
 
-from routeforge.debug.replay import explain_lines, load_trace, replay_lines
+from routeforge.debug.replay import checkpoints_in_trace, explain_lines, filter_checkpoint, load_trace, replay_lines
 from routeforge.labs.assessment import evaluate_assessment, load_assessment_rubric
 from routeforge.labs.conformance import load_conformance_matrix
 from routeforge.labs.exercises import LAB_RUNNERS, run_lab
 from routeforge.labs.manifest import LABS, get_lab, missing_prereqs, prerequisite_chain
 from routeforge.labs.student_checks import StudentCheckRun, run_staged_student_checks
-from routeforge.labs.student_targets import signatures_for_target, student_target_for_lab
+from routeforge.labs.student_targets import (
+    signatures_for_target,
+    student_target_for_lab,
+    validate_student_targets,
+)
 from routeforge.labs.progress import (
     CURRENT_VERSION as PROGRESS_VERSION,
     DEFAULT_PROGRESS_PATH,
@@ -52,6 +56,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
     status = sub.add_parser("status", help="Show current position, next lab, and score snapshot")
     status.add_argument("--state-file", type=Path, default=None)
+
+    sub.add_parser("validate-targets", help="Validate student target symbols resolve correctly")
 
     show = sub.add_parser("show", help="Show one lab entry")
     show.add_argument("lab_id")
@@ -135,6 +141,8 @@ def _build_parser() -> argparse.ArgumentParser:
     explain = debug_sub.add_parser("explain", help="Explain one step or summarize full trace")
     explain.add_argument("--trace", type=Path, required=True)
     explain.add_argument("--step", default=None, help="Optional step name to explain")
+    explain.add_argument("--checkpoint", default=None, help="Optional checkpoint name to filter records")
+    explain.add_argument("--list-checkpoints", action="store_true", help="List checkpoint names in a trace")
 
     return parser
 
@@ -158,6 +166,9 @@ def _lab_marker(*, lab_id: str, state: ProgressState | None) -> str:
 
 
 def _cmd_labs(state_file: Path | None) -> int:
+    for warning in validate_student_targets():
+        print(f"warning: {warning}")
+
     state: ProgressState | None = None
     state_path = state_file or DEFAULT_PROGRESS_PATH
     if state_file is not None or state_path.exists():
@@ -178,6 +189,16 @@ def _cmd_labs(state_file: Path | None) -> int:
             short_id = f"lab{lab_num:02d}"
             print(f"  {marker} {short_id}  {entry['title']}")
         print()
+    return 0
+
+
+def _cmd_validate_targets() -> int:
+    warnings = validate_student_targets()
+    if not warnings:
+        print("student targets: all symbols resolved")
+        return 0
+    for warning in warnings:
+        print(f"warning: {warning}")
     return 0
 
 
@@ -439,8 +460,17 @@ def _cmd_tdl_show(challenge_id: str) -> int:
     if entry is None:
         print(f"unknown tdl challenge: {challenge_id}")
         return 1
+    matrix = load_conformance_matrix()
     prereqs = ", ".join(entry["prereqs"]) if entry["prereqs"] else "none"
     symbols = ", ".join(entry["symbols"])
+    overlap_parts: list[str] = []
+    for feature_id in entry.get("conformance_features", []):
+        feature = matrix.features_by_id.get(feature_id)
+        if feature is None:
+            overlap_parts.append(f"{feature_id} (unknown)")
+        else:
+            overlap_parts.append(f"{feature_id} ({feature.level})")
+    overlap = ", ".join(overlap_parts) if overlap_parts else "none"
     print(f"id: {entry['id']}")
     print(f"title: {entry['title']}")
     print(f"domain: {entry['domain']}")
@@ -450,6 +480,7 @@ def _cmd_tdl_show(challenge_id: str) -> int:
     print(f"tdl.target: {entry['path']}")
     print(f"tdl.symbols: {symbols}")
     print(f"tdl.summary: {entry['summary']}")
+    print(f"conformance.overlap: {overlap}")
     return 0
 
 
@@ -840,9 +871,29 @@ def _cmd_debug_replay(trace_path: Path) -> int:
     return 0
 
 
-def _cmd_debug_explain(trace_path: Path, step: str | None) -> int:
+def _cmd_debug_explain(
+    trace_path: Path,
+    step: str | None,
+    checkpoint: str | None,
+    list_checkpoints: bool,
+) -> int:
     records = load_trace(trace_path)
-    lines = explain_lines(records, step=step)
+    if list_checkpoints:
+        names = checkpoints_in_trace(records)
+        for name in names:
+            print(name)
+        if not names:
+            print("no checkpoints found")
+        return 0
+
+    filtered = records
+    if checkpoint is not None:
+        filtered = filter_checkpoint(records, checkpoint)
+        if not filtered:
+            print(f"checkpoint not found: {checkpoint}")
+            return 1
+
+    lines = explain_lines(filtered, step=step)
     for line in lines:
         print(line)
     if step is not None and lines and lines[0].startswith("step not found:"):
@@ -858,6 +909,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_labs(args.state_file)
     if args.command == "status":
         return _cmd_status(args.state_file)
+    if args.command == "validate-targets":
+        return _cmd_validate_targets()
     if args.command == "show":
         return _cmd_show(args.lab_id)
     if args.command == "hint":
@@ -903,7 +956,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.debug_command == "replay":
             return _cmd_debug_replay(args.trace)
         if args.debug_command == "explain":
-            return _cmd_debug_explain(args.trace, args.step)
+            return _cmd_debug_explain(args.trace, args.step, args.checkpoint, args.list_checkpoints)
         parser.print_help()
         return 1
 

@@ -97,15 +97,20 @@ def _shorten_signature_text(text: str) -> str:
 
 def _resolve_symbol_signature(*, module_name: str, symbol: str) -> str:
     module = importlib.import_module(module_name)
-    parts = symbol.split(".")
-    target: Any = module
-    for part in parts:
-        target = getattr(target, part)
+    target = _resolve_symbol_obj(module=module, symbol=symbol)
     try:
         signature = inspect.signature(target, eval_str=True)
     except Exception:
         signature = inspect.signature(target)
     return f"{symbol}{_shorten_signature_text(str(signature))}"
+
+
+def _resolve_symbol_obj(*, module: object, symbol: str) -> Any:
+    parts = symbol.split(".")
+    target: Any = module
+    for part in parts:
+        target = getattr(target, part)
+    return target
 
 
 def signatures_for_target(target: StudentTarget) -> tuple[str, ...]:
@@ -117,3 +122,23 @@ def signatures_for_target(target: StudentTarget) -> tuple[str, ...]:
         except Exception:
             signatures.append(f"{symbol}(...) -> unknown")
     return tuple(signatures)
+
+
+def validate_student_targets(path: Path | None = None) -> tuple[str, ...]:
+    warnings: list[str] = []
+    targets = load_student_targets(path)
+    for target in targets.values():
+        module_name = _path_to_module(target.path)
+        try:
+            module = importlib.import_module(module_name)
+        except Exception as exc:
+            warnings.append(f"{target.lab_id}: failed to import {module_name} ({exc})")
+            continue
+        for symbol in target.symbols:
+            try:
+                _resolve_symbol_obj(module=module, symbol=symbol)
+            except Exception as exc:
+                warnings.append(
+                    f"{target.lab_id}: missing symbol {symbol} in {module_name} ({type(exc).__name__}: {exc})"
+                )
+    return tuple(warnings)
