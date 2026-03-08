@@ -15,7 +15,53 @@
 
 ## Concept walkthrough
 
-Multi-area behavior with ABR summary propagation. Student-mode coding target for this stage is `src/routeforge/runtime/ospf.py` (`originate_summaries`).
+### What problem do multiple OSPF areas solve?
+
+A single OSPF area with hundreds of routers means every router runs SPF on a massive LSDB.  OSPF areas divide the network into zones — each area runs its own SPF internally, and *Area Border Routers (ABRs)* summarize each area's routes before advertising them into the backbone (Area 0).  This reduces LSDB size and SPF computation on non-ABR routers.
+
+### Topology
+
+```
+           Area 0 (backbone)
+    ┌─────────────────────────────┐
+    │                             │
+   ABR1                          ABR2
+    │                             │
+    └──── Area 1 ────┐   ┌──── Area 2 ────┘
+          10.1.x.x   │   │   10.2.x.x
+         routers      │   │   routers
+```
+
+ABR1 is connected to both Area 0 and Area 1.  It summarizes all `10.1.x.x/24` routes from Area 1 into a single `10.1.0.0/16` summary advertised into Area 0.
+
+### How summarization works (this lab)
+
+`originate_summaries` takes a flat list of `AreaRoute` objects from all areas and produces one `/16` summary per non-backbone area:
+
+1. Filter out `area_id == 0` (backbone routes don't get summarized).
+2. Group remaining routes by `area_id`.
+3. For each area group, emit one `AreaRoute`:
+   - `prefix`: derive from the routes in the group — first two octets + `.0.0`
+     (e.g., routes with `10.1.1.0` and `10.1.2.0` → summary prefix `10.1.0.0`)
+   - `prefix_len`: 16
+   - `cost`: `max(cost for route in group)` (worst-case advertisement)
+4. Return all summaries sorted by `(area_id, prefix)`.
+
+### Worked example
+
+Input routes:
+```
+AreaRoute(area_id=1, prefix="10.1.1.0", prefix_len=24, cost=10)
+AreaRoute(area_id=1, prefix="10.1.2.0", prefix_len=24, cost=15)
+AreaRoute(area_id=0, prefix="10.0.0.0", prefix_len=8,  cost=1)   ← skip (backbone)
+```
+
+Output summaries:
+```
+AreaRoute(area_id=1, prefix="10.1.0.0", prefix_len=16, cost=15)
+```
+
+Student-mode coding target for this stage is `src/routeforge/runtime/ospf.py` (`originate_summaries`).
 
 ## Implementation TODO map
 
@@ -64,8 +110,13 @@ routeforge debug explain --trace /tmp/lab15_ospf_multi_area_abr.jsonl --step osp
 
 Checkpoint guide:
 
-- `OSPF_SUMMARY_ORIGINATE`: Multi-area behavior with ABR summary propagation.
-- `OSPF_INTERAREA_ROUTE_INSTALL`: Multi-area behavior with ABR summary propagation.
+- `OSPF_SUMMARY_ORIGINATE`: `originate_summaries` ran and produced at least one summary
+  route.  If missing, the function either raised an exception or returned an empty list
+  when summaries were expected.  Check that you're not accidentally filtering out non-zero
+  area routes — the filter should exclude `area_id == 0`, not include it.
+- `OSPF_INTERAREA_ROUTE_INSTALL`: A summary route was installed into the RIB as an
+  inter-area route.  If missing but `OSPF_SUMMARY_ORIGINATE` fired, the route installation
+  step after summary generation was not reached.
 
 ## Failure drills and troubleshooting flow
 

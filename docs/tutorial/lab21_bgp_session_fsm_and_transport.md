@@ -15,7 +15,43 @@
 
 ## Concept walkthrough
 
-BGP session lifecycle and timer-driven reset behavior. Student-mode coding target for this stage is `src/routeforge/runtime/bgp.py` (`bgp_session_transition`).
+### What problem does the BGP session FSM solve?
+
+BGP is a *session-oriented* protocol — two routers must complete a TCP connection, exchange OPEN messages, and confirm parameters before they can exchange routing information.  The FSM tracks where each session is in that process and ensures that unexpected events (TCP failures, malformed OPENs) send the session back to a safe state.
+
+### Topology
+
+```
+AS 65001             AS 65002
+  R1 ─────────── TCP/BGP ─────────────  R2
+  (10.1.1.1)     (port 179)       (10.1.1.2)
+```
+
+One eBGP session between R1 and R2.  The FSM on each router tracks the state of its side of the session.
+
+### BGP session FSM (this lab's scope)
+
+```
+   IDLE ──START──► CONNECT ──TCP_OPEN──► OPEN_SENT ──OPEN_RECEIVED──► OPEN_CONFIRM ──KEEPALIVE──► ESTABLISHED
+    ▲                  │                     │                               │                         │
+    │               TCP_FAIL               ERROR                          ERROR                    NOTIFICATION
+    │                  │                     │                               │                         │
+    └──────────────────┴─────────────────────┴───────────────────────────────┴─────────────────────────┘
+                  (any error or unexpected event → IDLE)
+```
+
+Normal session establishment sequence:
+```
+IDLE → (START) → CONNECT → (TCP_OPEN) → OPEN_SENT → (OPEN_RECEIVED) → OPEN_CONFIRM → (KEEPALIVE) → ESTABLISHED
+```
+
+### Common mistakes
+
+- Forgetting that `ESTABLISHED + NOTIFICATION → IDLE` (session teardown).
+- Returning `IDLE` for unknown states instead of `IDLE` (both correct, but make sure unknown states don't raise exceptions).
+- Not handling `KEEPALIVE` in `ESTABLISHED` → `ESTABLISHED` (stay alive).
+
+Student-mode coding target for this stage is `src/routeforge/runtime/bgp.py` (`bgp_session_transition`).
 
 ## Implementation TODO map
 
@@ -64,8 +100,12 @@ routeforge debug explain --trace /tmp/lab21_bgp_session_fsm_and_transport.jsonl 
 
 Checkpoint guide:
 
-- `BGP_OPEN_RX`: BGP session lifecycle and timer-driven reset behavior.
-- `BGP_SESSION_CHANGE`: BGP session lifecycle and timer-driven reset behavior.
+- `BGP_OPEN_RX`: A BGP OPEN message was received and the FSM was evaluated with the
+  `OPEN_RECEIVED` event.  If missing, the scenario didn't reach the open-exchange step —
+  check that the TCP_OPEN event first succeeds (CONNECT → OPEN_SENT).
+- `BGP_SESSION_CHANGE`: The session state changed (e.g., IDLE → CONNECT, OPEN_SENT →
+  OPEN_CONFIRM, or ESTABLISHED → IDLE).  If missing for a transition that should happen,
+  your FSM returned the same state as the input instead of the expected next state.
 
 ## Failure drills and troubleshooting flow
 

@@ -15,7 +15,37 @@
 
 ## Concept walkthrough
 
-Ethernet/IPv4 frame and header validation behavior. Student-mode coding target for this stage is `src/routeforge/model/packet.py` (`is_valid_mac, IPv4Header.validate, EthernetFrame.validate`).
+### What is an Ethernet frame?
+
+Every packet sent over an Ethernet network is wrapped in a *frame* — a fixed-format envelope that tells the network where to deliver it.  A frame contains:
+
+- **src_mac / dst_mac** — 48-bit hardware addresses in `aa:bb:cc:dd:ee:ff` format (6 groups of hex digits separated by colons).
+- **ethertype** — a 16-bit number identifying the payload type: `0x0800` for IPv4, `0x86DD` for IPv6, etc.  Valid range: 0–65535.
+- **vlan_id** (optional) — a 12-bit VLAN tag; valid range 1–4094 (0 and 4095 are reserved).
+- **payload** — for these labs, always an `IPv4Header`.
+
+### What is an IPv4 header?
+
+The payload carries L3 addressing:
+
+- **src_ip / dst_ip** — dotted-decimal IPv4 addresses (`"192.0.2.1"`).  Must be parseable by `ipaddress.IPv4Address`.
+- **ttl** — Time to Live, a hop counter that prevents routing loops.  Packets with TTL ≤ 1 are dropped (TTL is checked *before* decrement, so TTL=1 means "drop here").
+
+### Validation rules
+
+| Field | Valid condition | Error code |
+|---|---|---|
+| `src_mac` | matches `XX:XX:XX:XX:XX:XX` hex pattern | `L2_INVALID_SRC_MAC` |
+| `dst_mac` | matches `XX:XX:XX:XX:XX:XX` hex pattern | `L2_INVALID_DST_MAC` |
+| `ethertype` | `0 <= ethertype < 65536` | `L2_UNSUPPORTED_ETHERTYPE` |
+| `vlan_id` | None, or `1 <= vlan_id <= 4094` | `L2_INVALID_VLAN` |
+| `src_ip` | valid IPv4 address string | `L3_INVALID_SRC_IP` |
+| `dst_ip` | valid IPv4 address string | `L3_INVALID_DST_IP` |
+| `ttl` | `ttl > 1` | `L3_INVALID_TTL` |
+
+**Spot the bug:** the pre-filled ethertype check in `packet.py` has an operator precedence error.  Find it and fix it before running the tests.
+
+Student-mode coding target for this stage is `src/routeforge/model/packet.py` (`is_valid_mac, IPv4Header.validate, EthernetFrame.validate`).
 
 ## Implementation TODO map
 
@@ -36,7 +66,7 @@ Required error-code strings for this lab (exact match):
 - `L3_INVALID_DST_IP`
 - `L3_INVALID_TTL`
 
-These are also declared in `src/routeforge/model/packet.py` for direct in-code reference.
+Use these exact strings in your implementation — they are the expected error codes checked by the tests.
 
 Suggested student walkthrough:
 
@@ -76,11 +106,17 @@ routeforge debug explain --trace /tmp/lab01_frame_and_headers.jsonl --step valid
 
 Checkpoint guide:
 
-- `PARSE_OK`: Ethernet/IPv4 frame and header validation behavior.
-- `VLAN_CLASSIFY`: VLAN tagging/untagging and per-VLAN forwarding behavior.
-- `MAC_LEARN`: MAC learning, unknown unicast flood, deterministic unicast forwarding.
-- `L2_FLOOD`: MAC learning, unknown unicast flood, deterministic unicast forwarding.
-- `PARSE_DROP`: Ethernet/IPv4 frame and header validation behavior.
+- `PARSE_OK`: Frame passed full L2+L3 validation — all fields are well-formed.
+  If missing for a valid frame, your `EthernetFrame.validate()` or `IPv4Header.validate()`
+  is returning unexpected errors.  Check the ethertype operator precedence bug.
+- `VLAN_CLASSIFY`: VLAN classification succeeded — the ingress port accepted the frame's
+  tag/untagged state.  Follows `PARSE_OK` on the valid frame path.
+- `MAC_LEARN`: Source MAC was learned into the FDB.  Expected for valid frames on known interfaces.
+- `L2_FLOOD`: Frame is being flooded (broadcast or unknown unicast destination).
+  Expected for the first frame in the lab since no FDB entries exist yet.
+- `PARSE_DROP`: Frame was dropped during or after parsing.  Expected for the invalid frame
+  (bad src_mac).  If this fires for a valid frame, check your validation logic for false
+  positives (e.g., the ethertype bug accepting out-of-range values).
 
 ## Failure drills and troubleshooting flow
 

@@ -64,8 +64,18 @@ def _required_checkpoints_for_lab(lab_id: str) -> set[str]:
 
 def _assert_stage_lab(lab_id: str) -> None:
     result = run_lab(lab_id)
-    assert result.passed is True
-    assert _required_checkpoints_for_lab(lab_id) <= set(result.checkpoints)
+    failed_steps = [s.name for s in result.steps if not s.passed]
+    assert result.passed is True, (
+        f"Lab {lab_id} failed. "
+        f"Failed steps: {failed_steps}. "
+        f"See docs/tutorial/{lab_id}.md for the concept walkthrough."
+    )
+    missing = _required_checkpoints_for_lab(lab_id) - set(result.checkpoints)
+    assert not missing, (
+        f"Lab {lab_id}: required checkpoints not reached: {sorted(missing)}. "
+        f"Your implementation must emit these checkpoints. "
+        f"See docs/tutorial/{lab_id}.md for the checkpoint guide."
+    )
 
 
 @pytest.mark.stage(1)
