@@ -9,7 +9,8 @@ from typing import Any
 
 from routeforge.labs.manifest import LABS, missing_prereqs
 
-DEFAULT_PROGRESS_PATH = Path(".routeforge_progress.json")
+DEFAULT_PROGRESS_PATH = Path.home() / ".routeforge_progress.json"
+LEGACY_PROGRESS_PATH = Path(".routeforge_progress.json")
 CURRENT_VERSION = 1
 
 

@@ -108,8 +108,8 @@ routeforge debug explain --trace /tmp/lab24_bgp_scaling_patterns.jsonl --step bg
 
 Checkpoint guide:
 
-- `BGP_ROUTE_REFLECT`: fires when `route_reflect` distributes the source client's prefixes to the other clients. If this checkpoint is absent, the function was not called or returned before populating the output dict. If it fires but the source client appears as a key in the returned dict, the exclusion logic is missing — the source should never receive its own reflected routes. If other clients are missing from the output, verify that you are iterating over all keys in `learned` except `source_client`.
-- `BGP_CONVERGENCE`: fires when `convergence_mark` evaluates whether the before and after routing-table snapshots are identical. If this checkpoint is absent, the convergence check step was skipped entirely. If it fires but returns the wrong boolean, confirm that you are doing a direct equality comparison (`before == after`) rather than checking only a subset of keys or using identity comparison (`is`).
+- `BGP_RR_REFLECT`: fires when `route_reflect` distributes the source client's prefixes to the other clients. If this checkpoint is absent, the function was not called or returned before populating the output dict. If it fires but the source client appears as a key in the returned dict, the exclusion logic is missing — the source should never receive its own reflected routes. If other clients are missing from the output, verify that you are iterating over all keys in `learned` except `source_client`.
+- `BGP_CONVERGENCE_MARK`: fires when `convergence_mark` evaluates whether the before and after routing-table snapshots are identical. If this checkpoint is absent, the convergence check step was skipped entirely. If it fires but returns the wrong boolean, confirm that you are doing a direct equality comparison (`before == after`) rather than checking only a subset of keys or using identity comparison (`is`).
 
 ## Failure drills and troubleshooting flow
 
@@ -121,4 +121,3 @@ Checkpoint guide:
 ## Standards and references
 
 - RFC 4271 (BGP-4).
-

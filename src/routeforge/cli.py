@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 import re
+from dataclasses import dataclass
 
 from routeforge.debug.replay import checkpoints_in_trace, explain_lines, filter_checkpoint, load_trace, replay_lines
 from routeforge.labs.assessment import evaluate_assessment, load_assessment_rubric
@@ -22,6 +23,7 @@ from routeforge.labs.student_targets import (
 from routeforge.labs.progress import (
     CURRENT_VERSION as PROGRESS_VERSION,
     DEFAULT_PROGRESS_PATH,
+    LEGACY_PROGRESS_PATH,
     ProgressState,
     apply_run_result,
     clear_progress,
@@ -37,6 +39,7 @@ from routeforge.tdl.manifest import TDL_CHALLENGES, get_tdl_challenge, tdl_missi
 from routeforge.tdl.progress import (
     CURRENT_VERSION as TDL_PROGRESS_VERSION,
     DEFAULT_TDL_PROGRESS_PATH,
+    LEGACY_TDL_PROGRESS_PATH,
     TdlProgressState,
     apply_tdl_run_result,
     clear_tdl_progress,
@@ -155,6 +158,12 @@ PHASE_GROUPS: tuple[tuple[str, range], ...] = (
 )
 
 
+@dataclass(frozen=True)
+class ResolvedStatePath:
+    path: Path
+    warning: str | None = None
+
+
 def _lab_marker(*, lab_id: str, state: ProgressState | None) -> str:
     if state is None:
         return "[ ]"
@@ -170,7 +179,9 @@ def _cmd_labs(state_file: Path | None) -> int:
         print(f"warning: {warning}")
 
     state: ProgressState | None = None
-    state_path = state_file or DEFAULT_PROGRESS_PATH
+    resolved = _resolve_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     if state_file is not None or state_path.exists():
         try:
             state = load_progress(state_path)
@@ -241,7 +252,9 @@ def _cmd_show(lab_id: str) -> int:
 
 
 def _cmd_status(state_file: Path | None) -> int:
-    state_path = _resolve_state_file(state_file)
+    resolved = _resolve_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     try:
         state = load_progress(state_path)
         rubric = load_assessment_rubric()
@@ -290,8 +303,31 @@ def _parse_completed(values: list[str]) -> set[str]:
     return completed
 
 
-def _resolve_state_file(path: Path | None) -> Path:
-    return path or DEFAULT_PROGRESS_PATH
+def _legacy_fallback_warning(*, current_path: Path, default_path: Path, kind: str) -> str:
+    return (
+        f"warning: using legacy local {kind} file {current_path}; "
+        f"move it to {default_path} or pass --state-file explicitly."
+    )
+
+
+def _resolve_state_file(path: Path | None) -> ResolvedStatePath:
+    if path is not None:
+        return ResolvedStatePath(path=path)
+    if not DEFAULT_PROGRESS_PATH.exists() and LEGACY_PROGRESS_PATH.exists():
+        return ResolvedStatePath(
+            path=LEGACY_PROGRESS_PATH,
+            warning=_legacy_fallback_warning(
+                current_path=LEGACY_PROGRESS_PATH,
+                default_path=DEFAULT_PROGRESS_PATH,
+                kind="progress",
+            ),
+        )
+    return ResolvedStatePath(path=DEFAULT_PROGRESS_PATH)
+
+
+def _print_resolution_warning(resolved: ResolvedStatePath) -> None:
+    if resolved.warning:
+        print(resolved.warning)
 
 
 def _cmd_run(lab_id: str, completed_values: list[str], trace_out: Path | None, state_file: Path | None) -> int:
@@ -300,15 +336,15 @@ def _cmd_run(lab_id: str, completed_values: list[str], trace_out: Path | None, s
         print(f"unknown lab: {lab_id}")
         return 1
 
-    state_path: Path | None = None
+    resolved = _resolve_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     progress_state: ProgressState | None = None
-    if state_file is not None:
-        state_path = _resolve_state_file(state_file)
-        try:
-            progress_state = load_progress(state_path)
-        except (OSError, ValueError) as exc:
-            print(f"failed to load progress: {exc}")
-            return 1
+    try:
+        progress_state = load_progress(state_path)
+    except (OSError, ValueError) as exc:
+        print(f"failed to load progress: {exc}")
+        return 1
 
     completed = _parse_completed(completed_values)
     if progress_state is not None:
@@ -354,7 +390,7 @@ def _cmd_run(lab_id: str, completed_values: list[str], trace_out: Path | None, s
     print(f"checkpoints: {checkpoints}")
     code = 0 if result.passed else 4
 
-    if state_path is not None and progress_state is not None:
+    if progress_state is not None:
         try:
             updated = apply_run_result(progress_state, lab_id=lab_id, passed=result.passed)
             saved = save_progress(updated, state_path)
@@ -367,7 +403,9 @@ def _cmd_run(lab_id: str, completed_values: list[str], trace_out: Path | None, s
 
 
 def _cmd_progress_show(state_file: Path | None) -> int:
-    state_path = _resolve_state_file(state_file)
+    resolved = _resolve_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     try:
         state = load_progress(state_path)
     except (OSError, ValueError) as exc:
@@ -392,7 +430,9 @@ def _cmd_progress_mark(lab_id: str, state_file: Path | None) -> int:
         print(f"unknown lab: {lab_id}")
         return 1
 
-    state_path = _resolve_state_file(state_file)
+    resolved = _resolve_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     try:
         state = load_progress(state_path)
         updated = mark_completed(state, lab_id)
@@ -407,7 +447,9 @@ def _cmd_progress_mark(lab_id: str, state_file: Path | None) -> int:
 
 
 def _cmd_progress_reset(state_file: Path | None) -> int:
-    state_path = _resolve_state_file(state_file)
+    resolved = _resolve_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     try:
         save_progress(clear_progress(), state_path)
     except OSError as exc:
@@ -418,7 +460,9 @@ def _cmd_progress_reset(state_file: Path | None) -> int:
 
 
 def _cmd_progress_migrate(state_file: Path | None) -> int:
-    state_path = _resolve_state_file(state_file)
+    resolved = _resolve_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     try:
         migrated = migrate_progress(state_path)
     except (OSError, ValueError) as exc:
@@ -428,12 +472,25 @@ def _cmd_progress_migrate(state_file: Path | None) -> int:
     return 0
 
 
-def _resolve_tdl_state_file(path: Path | None) -> Path:
-    return path or DEFAULT_TDL_PROGRESS_PATH
+def _resolve_tdl_state_file(path: Path | None) -> ResolvedStatePath:
+    if path is not None:
+        return ResolvedStatePath(path=path)
+    if not DEFAULT_TDL_PROGRESS_PATH.exists() and LEGACY_TDL_PROGRESS_PATH.exists():
+        return ResolvedStatePath(
+            path=LEGACY_TDL_PROGRESS_PATH,
+            warning=_legacy_fallback_warning(
+                current_path=LEGACY_TDL_PROGRESS_PATH,
+                default_path=DEFAULT_TDL_PROGRESS_PATH,
+                kind="tdl progress",
+            ),
+        )
+    return ResolvedStatePath(path=DEFAULT_TDL_PROGRESS_PATH)
 
 
 def _cmd_tdl_list(state_file: Path | None) -> int:
-    state_path = _resolve_tdl_state_file(state_file)
+    resolved = _resolve_tdl_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     try:
         state = load_tdl_progress(state_path)
     except (OSError, ValueError) as exc:
@@ -507,7 +564,9 @@ def _cmd_tdl_run(challenge_id: str, state_file: Path | None) -> int:
         print(f"unknown tdl challenge: {challenge_id}")
         return 1
 
-    state_path = _resolve_tdl_state_file(state_file)
+    resolved = _resolve_tdl_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     try:
         progress_state: TdlProgressState = load_tdl_progress(state_path)
     except (OSError, ValueError) as exc:
@@ -546,7 +605,9 @@ def _cmd_tdl_run(challenge_id: str, state_file: Path | None) -> int:
 
 
 def _cmd_tdl_progress_show(state_file: Path | None) -> int:
-    state_path = _resolve_tdl_state_file(state_file)
+    resolved = _resolve_tdl_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     try:
         state = load_tdl_progress(state_path)
     except (OSError, ValueError) as exc:
@@ -565,7 +626,9 @@ def _cmd_tdl_progress_show(state_file: Path | None) -> int:
 
 
 def _cmd_tdl_progress_reset(state_file: Path | None) -> int:
-    state_path = _resolve_tdl_state_file(state_file)
+    resolved = _resolve_tdl_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     try:
         save_tdl_progress(clear_tdl_progress(), state_path)
     except OSError as exc:
@@ -576,7 +639,9 @@ def _cmd_tdl_progress_reset(state_file: Path | None) -> int:
 
 
 def _cmd_tdl_progress_migrate(state_file: Path | None) -> int:
-    state_path = _resolve_tdl_state_file(state_file)
+    resolved = _resolve_tdl_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     try:
         migrated = migrate_tdl_progress(state_path)
     except (OSError, ValueError) as exc:
@@ -619,6 +684,15 @@ def _format_student_check_failures(result: StudentCheckRun) -> tuple[str, ...]:
     return tuple(lines)
 
 
+def _student_check_startup_message(result: StudentCheckRun) -> str | None:
+    if result.total > 0 or result.returncode == 0 or not result.raw_output:
+        return None
+    lines = [line.strip() for line in result.raw_output.splitlines() if line.strip()]
+    if not lines:
+        return None
+    return lines[-1]
+
+
 def _cmd_check(target: str, verbose: bool) -> int:
     stage_info = _stage_for_target(target)
     if stage_info is None:
@@ -641,6 +715,12 @@ def _cmd_check(target: str, verbose: bool) -> int:
     hint_lab = _hint_lab_for_stage(stage_max)
     if result.total > 0:
         print(f"{result.passed} of {result.total} tests passed — run 'routeforge hint {hint_lab}' for contracts")
+    elif (startup_message := _student_check_startup_message(result)) is not None:
+        print(f"[FAIL] pytest startup: {startup_message}")
+        print(
+            f"staged checks failed before test collection — run 'routeforge check {label} --verbose' "
+            "for details"
+        )
     else:
         print(f"0 tests discovered — run 'routeforge hint {hint_lab}' for contracts")
     return result.returncode
@@ -659,7 +739,9 @@ def _remediation_paths(lab_ids: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def _cmd_report(state_file: Path | None, rubric_file: Path | None, json_out: Path | None) -> int:
-    state_path = _resolve_state_file(state_file)
+    resolved = _resolve_state_file(state_file)
+    _print_resolution_warning(resolved)
+    state_path = resolved.path
     try:
         state = load_progress(state_path)
         matrix = load_conformance_matrix()
@@ -854,16 +936,34 @@ def _cmd_hint(lab_id: str, symbol: str | None) -> int:
         print(f"  (could not load module {module_name}: {exc})")
         print()
 
-    # Point to the contract test file
-    module_short = (
-        student_target.path
-        .removeprefix("src/routeforge/runtime/")
-        .removeprefix("src/routeforge/labs/")
-        .removesuffix(".py")
-    )
-    contract_test = f"tests/contract/test_{module_short}.py"
-    print(f"contract tests: {contract_test}")
+    contract_tests = _find_contract_tests(student_target.path, student_target.symbols)
+    print("staged learner gate: tests/student/test_stage_progression.py")
+    if contract_tests:
+        print("contract tests:")
+        for contract_test in contract_tests:
+            print(f"  {contract_test}")
     return 0
+
+
+def _find_contract_tests(target_path: str, _symbols: tuple[str, ...]) -> tuple[str, ...]:
+    import ast
+
+    repo_root = Path(__file__).resolve().parents[2]
+    contract_dir = repo_root / "tests" / "contract"
+    module_name = target_path.removeprefix("src/").removesuffix(".py").replace("/", ".")
+
+    matches: list[str] = []
+    for test_file in sorted(contract_dir.glob("test_*.py")):
+        tree = ast.parse(test_file.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module == module_name:
+                matches.append(str(test_file.relative_to(repo_root)))
+                break
+            if isinstance(node, ast.Import):
+                if any(alias.name == module_name for alias in node.names):
+                    matches.append(str(test_file.relative_to(repo_root)))
+                    break
+    return tuple(matches)
 
 
 def _cmd_debug_replay(trace_path: Path) -> int:

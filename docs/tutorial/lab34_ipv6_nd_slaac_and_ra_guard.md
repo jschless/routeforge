@@ -6,7 +6,7 @@
 - Deliver `ipv6_nd_learn`: neighbor discovery entry is learned on trusted RA.
 - Deliver `ipv6_slaac_apply`: SLAAC derives deterministic global address.
 - Deliver `ipv6_ra_guard_drop`: untrusted RA is blocked by RA guard.
-- Validate internal behavior through checkpoints: ND_RA_TRUSTED, ND_RA_DROP, SLAAC_ADDR_DERIVED.
+- Validate internal behavior through checkpoints: ND_NEIGHBOR_LEARN, SLAAC_PREFIX_APPLY, RA_GUARD_DROP.
 
 ## Prerequisite recap
 
@@ -90,7 +90,7 @@ Expected outcomes:
 - `ipv6_nd_learn` should print `[PASS]` (neighbor discovery entry is learned on trusted RA).
 - `ipv6_slaac_apply` should print `[PASS]` (SLAAC derives deterministic global address).
 - `ipv6_ra_guard_drop` should print `[PASS]` (untrusted RA is blocked by RA guard).
-- Run output includes checkpoints: ND_RA_TRUSTED, ND_RA_DROP, SLAAC_ADDR_DERIVED.
+- Run output includes checkpoints: ND_NEIGHBOR_LEARN, SLAAC_PREFIX_APPLY, RA_GUARD_DROP.
 
 ## Debug trace checkpoints and interpretation guidance
 
@@ -104,11 +104,9 @@ routeforge debug explain --trace /tmp/lab34_ipv6_nd_slaac_and_ra_guard.jsonl --s
 
 Checkpoint guide:
 
-- `ND_RA_TRUSTED`: fires when a Router Advertisement arrives on a trusted port and is passed through for processing. The function received `ra_trusted=True` and proceeded past the drop check. If this checkpoint is missing when you pass a trusted RA, confirm that your function reads `ra_trusted` rather than hardcoding `False`, and that `"ALLOW"` is returned rather than `"DROP"`.
-
-- `ND_RA_DROP`: fires when a Router Advertisement is silently dropped because the source port is untrusted. The function received `ra_trusted=False` and returned `("DROP", "")` immediately without deriving any address. If this checkpoint is missing when you send an untrusted RA, check that your early-return path for `ra_trusted=False` is reached before address derivation logic.
-
-- `SLAAC_ADDR_DERIVED`: fires when a global unicast address is successfully built from the RA prefix and the host identifier. The returned string should be in the form `prefix::host_id`. If this checkpoint fires but the address value is wrong, trace through `derive_slaac_host_id` to verify the split on `fe80::` and the default of `"1"` for empty suffixes.
+- `ND_NEIGHBOR_LEARN`: fires when a Router Advertisement arrives on a trusted port and is accepted for neighbor processing. If this checkpoint is missing when you pass a trusted RA, confirm that your function reads `ra_trusted` rather than hardcoding `False`.
+- `RA_GUARD_DROP`: fires when a Router Advertisement is silently dropped because the source port is untrusted. The function received `ra_trusted=False` and returned `("DROP", "")` immediately without deriving any address. If this checkpoint is missing when you send an untrusted RA, check that your early-return path for `ra_trusted=False` is reached before address derivation logic.
+- `SLAAC_PREFIX_APPLY`: fires when a global unicast address is successfully built from the RA prefix and the host identifier. The returned string should be in the form `prefix::host_id`. If this checkpoint fires but the address value is wrong, trace through `derive_slaac_host_id` to verify the split on `fe80::` and the default of `"1"` for empty suffixes.
 
 ## Failure drills and troubleshooting flow
 

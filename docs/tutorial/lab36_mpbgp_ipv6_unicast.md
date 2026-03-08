@@ -6,7 +6,7 @@
 - Deliver `mpbgp_update_rx`: MP-BGP IPv6 updates are ingested.
 - Deliver `mpbgp_afi_select`: IPv6 unicast AFI/SAFI context is selected.
 - Deliver `mpbgp_bestpath`: best path chosen by deterministic policy.
-- Validate internal behavior through checkpoints: MPBGP_BESTPATH, MPBGP_NO_PATHS.
+- Validate internal behavior through checkpoints: BGP_MP_UPDATE_RX, BGP_AF_SELECT, BGP_MP_BESTPATH.
 
 ## Prerequisite recap
 
@@ -83,7 +83,7 @@ Expected outcomes:
 - `mpbgp_update_rx` should print `[PASS]` (MP-BGP IPv6 updates are ingested).
 - `mpbgp_afi_select` should print `[PASS]` (IPv6 unicast AFI/SAFI context is selected).
 - `mpbgp_bestpath` should print `[PASS]` (best path chosen by deterministic policy).
-- Run output includes checkpoints: MPBGP_BESTPATH, MPBGP_NO_PATHS.
+- Run output includes checkpoints: BGP_MP_UPDATE_RX, BGP_AF_SELECT, BGP_MP_BESTPATH.
 
 ## Debug trace checkpoints and interpretation guidance
 
@@ -97,9 +97,9 @@ routeforge debug explain --trace /tmp/lab36_mpbgp_ipv6_unicast.jsonl --step mpbg
 
 Checkpoint guide:
 
-- `MPBGP_BESTPATH`: fires when best-path selection completes and a winner is returned. The function received a non-empty `paths` list and returned the `MpbgpPath` with the lowest rank key. If this checkpoint fires but the wrong path is selected, print the rank key for each candidate and confirm that `local_pref` is negated, `as_path_len` is used as-is, and `next_hop` breaks remaining ties lexicographically. A common mistake is forgetting the negation, which causes the path with the lowest local preference to win instead of the highest.
-
-- `MPBGP_NO_PATHS`: fires when `mpbgp_ipv6_unicast` is called with an empty list and raises `ValueError`. This checkpoint validates the guard clause. If this checkpoint is missing when you pass an empty list, check that your function raises `ValueError` before attempting to call `min` or iterate over the paths, and that it does not silently return `None` or a default value.
+- `BGP_MP_UPDATE_RX`: fires when the lab scenario receives the candidate MP-BGP IPv6 path set and begins best-path evaluation. If this checkpoint is missing, the scenario did not reach the update-ingest step.
+- `BGP_AF_SELECT`: fires when the scenario locks onto the IPv6 unicast AFI/SAFI context before ranking paths. If this checkpoint is missing, the control-flow into the IPv6 selection branch is wrong.
+- `BGP_MP_BESTPATH`: fires when best-path selection completes and a winner is returned. The function received a non-empty `paths` list and returned the `MpbgpPath` with the lowest rank key. If this checkpoint fires but the wrong path is selected, print the rank key for each candidate and confirm that `local_pref` is negated, `as_path_len` is used as-is, and `next_hop` breaks remaining ties lexicographically. A common mistake is forgetting the negation, which causes the path with the lowest local preference to win instead of the highest.
 
 ## Failure drills and troubleshooting flow
 

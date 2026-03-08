@@ -9,7 +9,8 @@ from typing import Any
 
 from routeforge.tdl.manifest import TDL_CHALLENGES, get_tdl_challenge, tdl_missing_prereqs
 
-DEFAULT_TDL_PROGRESS_PATH = Path(".routeforge_tdl_progress.json")
+DEFAULT_TDL_PROGRESS_PATH = Path.home() / ".routeforge_tdl_progress.json"
+LEGACY_TDL_PROGRESS_PATH = Path(".routeforge_tdl_progress.json")
 CURRENT_VERSION = 1
 
 

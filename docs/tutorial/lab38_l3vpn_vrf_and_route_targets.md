@@ -6,7 +6,7 @@
 - Deliver `vrf_route_install`: VRF route installs when import RT matches.
 - Deliver `rt_import_match`: route-target import policy accepts matching RT.
 - Deliver `vpnv4_resolve`: VPNv4 route resolves into tenant VRF.
-- Validate internal behavior through checkpoints: VPN_RT_IMPORT, VPN_RT_REJECT.
+- Validate internal behavior through checkpoints: VRF_ROUTE_INSTALL, RT_IMPORT, VPNV4_RESOLVE.
 
 ## Prerequisite recap
 
@@ -82,7 +82,7 @@ Expected outcomes:
 - `vrf_route_install` should print `[PASS]` (VRF route installs when import RT matches).
 - `rt_import_match` should print `[PASS]` (route-target import policy accepts matching RT).
 - `vpnv4_resolve` should print `[PASS]` (VPNv4 route resolves into tenant VRF).
-- Run output includes checkpoints: VPN_RT_IMPORT, VPN_RT_REJECT.
+- Run output includes checkpoints: VRF_ROUTE_INSTALL, RT_IMPORT, VPNV4_RESOLVE.
 
 ## Debug trace checkpoints and interpretation guidance
 
@@ -96,9 +96,9 @@ routeforge debug explain --trace /tmp/lab38_l3vpn_vrf_and_route_targets.jsonl --
 
 Checkpoint guide:
 
-- `VPN_RT_IMPORT`: fires when a VPN route is imported into a VRF — meaning `route_rt` was found in `import_rts` and the prefix was accepted. If this checkpoint is missing when you expect an import, your membership test is failing. Common mistakes: comparing against the wrong variable, treating `import_rts` as a list when it is a set, or accidentally negating the condition. Verify that `vrf_import_action` returns `"IMPORT"` (not `"ACCEPT"` or `True`) when the RT matches.
-
-- `VPN_RT_REJECT`: fires when a VPN route is rejected because its RT does not appear in the VRF's import policy. The prefix is dropped and never installed. If this checkpoint is missing on a non-matching route, `l3vpn_vrf_route_targets` is returning `"IMPORT"` unconditionally — the membership check is likely absent or inverted. Both `VPN_RT_IMPORT` and `VPN_RT_REJECT` must appear across the test cases (one per matching route, one per non-matching route) for the full step suite to pass.
+- `RT_IMPORT`: fires when the route-target policy matches and the VRF import decision is `"IMPORT"`. If this checkpoint is missing when you expect an import, your membership test is failing. Common mistakes: comparing against the wrong variable, treating `import_rts` as a list when it is a set, or accidentally negating the condition.
+- `VRF_ROUTE_INSTALL`: fires when the accepted VPN route is installed into the VRF. If this checkpoint is missing after `RT_IMPORT`, the route-install action is not being emitted correctly.
+- `VPNV4_RESOLVE`: fires when the VPNv4 route resolves into the tenant VRF context as part of the final scenario output. If this checkpoint is missing, the resolution step did not consume the accepted route.
 
 ## Failure drills and troubleshooting flow
 

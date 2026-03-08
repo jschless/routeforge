@@ -54,8 +54,8 @@ The learned MAC table is returned as a tuple (immutable). On a `PORTSEC_VIOLATIO
 ### What correct behavior looks like
 
 A port configured with `max_macs=2`:
-- Frame 1 from `aa:bb` → learn, check IP → `ALLOW` (PORTSEC_MAC_LEARN fires)
-- Frame 2 from `cc:dd` → learn, check IP → `ALLOW` (PORTSEC_MAC_LEARN fires)
+- Frame 1 from `aa:bb` → learn, check IP → `ALLOW` (PORTSEC_LEARN fires)
+- Frame 2 from `cc:dd` → learn, check IP → `ALLOW` (PORTSEC_LEARN fires)
 - Frame 3 from `ee:ff` → table full → `PORTSEC_VIOLATION` (no learn)
 - Frame 4 from `aa:bb` with a spoofed IP → already known MAC, IP not in allowed set → `IPSG_DENY`
 
@@ -114,7 +114,7 @@ routeforge debug explain --trace /tmp/lab29_port_security_and_ip_source_guard.js
 
 Checkpoint guide:
 
-- `PORTSEC_MAC_LEARN`: A new source MAC was successfully added to the learned MAC table because the table had room. This fires only when the MAC was not already present and `len(learned_macs) < max_macs`. If this checkpoint is missing during the `portsec_learn` step, your implementation is not adding the new MAC to the tuple — verify that you construct and return an updated tuple with the new MAC appended.
+- `PORTSEC_LEARN`: A new source MAC was successfully added to the learned MAC table because the table had room. This fires only when the MAC was not already present and `len(learned_macs) < max_macs`. If this checkpoint is missing during the `portsec_learn` step, your implementation is not adding the new MAC to the tuple — verify that you construct and return an updated tuple with the new MAC appended.
 - `PORTSEC_VIOLATION`: The MAC table was at capacity and an unknown source MAC arrived. The frame is denied and the table is not modified. If this checkpoint is missing during the `portsec_violation` step, your implementation is either learning the MAC beyond the limit (check the `>=` boundary condition) or is not returning `"PORTSEC_VIOLATION"` — confirm that you stop processing and return the original unchanged tuple.
 - `IPSG_DENY`: Port security passed (the MAC is known or was just learned), but the source IP was not in the allowed set. This checkpoint fires after MAC admission, not before — if you see `PORTSEC_VIOLATION` and `IPSG_DENY` on the same frame, the policy ordering is wrong. If `IPSG_DENY` is missing during the `ipsg_deny` step, check that you evaluate `source_ip_allowed` after the MAC check and return `"IPSG_DENY"` when it is `False`.
 

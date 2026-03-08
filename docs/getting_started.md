@@ -145,6 +145,8 @@ routeforge progress show --state-file "$STATE"
 
 Repeat in order through the curriculum.
 
+If you omit `--state-file`, RouteForge stores progress in `~/.routeforge_progress.json` by default. If that file does not exist yet but a legacy local `.routeforge_progress.json` is present in your current working directory, the CLI warns and uses the legacy file until you migrate it.
+
 ## Debug Workflow When Something Fails
 
 ```bash
