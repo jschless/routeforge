@@ -7,8 +7,9 @@ targets:
   symbols:
   - is_valid_mac
   - IPv4Header.validate
+  - EthernetFrame.__post_init__
   - EthernetFrame.validate
-  summary: Validate Ethernet and IPv4 header fields.
+  summary: Validate Ethernet/IPv4 fields plus structural frame ranges.
 - lab_id: lab02_mac_learning_switch
   stage: 2
   path: src/routeforge/runtime/dataplane_sim.py

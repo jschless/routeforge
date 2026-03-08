@@ -430,6 +430,34 @@ def test_run_with_state_file_updates_progress(tmp_path, capsys) -> None:
     assert f"labs.completed: 1/{total_labs}" in show_out
 
 
+def test_run_preserves_legacy_progress_and_upgrades_on_save(monkeypatch, tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(
+        "routeforge.cli.run_lab",
+        lambda lab_id: _passing_lab_result(lab_id, step_name="unknown_unicast_flood"),
+    )
+    state = tmp_path / "legacy-progress.json"
+    state.write_text(
+        json.dumps(
+            {
+                "completed": ["lab01_frame_and_headers"],
+                "run_counts": {"lab01_frame_and_headers": 1},
+                "pass_counts": {"lab01_frame_and_headers": 1},
+                "last_result": {"lab01_frame_and_headers": "PASS"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert main(["run", "lab02_mac_learning_switch", "--state-file", str(state)]) == 0
+    output = capsys.readouterr().out
+    assert "loaded legacy state" in output
+    payload = json.loads(state.read_text(encoding="utf-8"))
+    assert payload["version"] == 1
+    assert payload["completed"][:2] == ["lab01_frame_and_headers", "lab02_mac_learning_switch"]
+    assert payload["run_counts"]["lab01_frame_and_headers"] == 1
+    assert payload["run_counts"]["lab02_mac_learning_switch"] == 1
+
+
 def test_run_uses_saved_progress_for_prereqs(monkeypatch, tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.setattr(
         "routeforge.cli.run_lab",
@@ -487,3 +515,13 @@ def test_hint_reports_real_test_files(capsys) -> None:
     assert "staged learner gate: tests/student/test_stage_progression.py" in output
     assert "tests/contract/test_packet_and_interface.py" in output
     assert "tests/contract/test_src/routeforge/model/packet.py" not in output
+
+
+def test_hint_reports_phase2_shim_contract_tests(capsys) -> None:
+    assert main(["hint", "lab28_dhcp_snooping_and_dai"]) == 0
+    lab28_output = capsys.readouterr().out
+    assert "tests/contract/test_phase2_runtime.py" in lab28_output
+
+    assert main(["hint", "lab39_bgp_evpn_vxlan_basics"]) == 0
+    lab39_output = capsys.readouterr().out
+    assert "tests/contract/test_phase2_runtime.py" in lab39_output

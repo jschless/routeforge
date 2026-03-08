@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from routeforge.model.packet import ETHERTYPE_IPV4, EthernetFrame, IPv4Header
 from routeforge.runtime.interface import Interface
 
@@ -28,17 +26,53 @@ def test_packet_validation_rejects_bad_mac_and_ttl() -> None:
     assert "L3_INVALID_TTL" in errors
 
 
-# Note: ``EthernetFrame`` contains an intentional student bug around ethertype
-# range validation. Try ``ethertype=70000`` and verify constructor behavior.
-@pytest.mark.xfail(reason="intentional student bug — fix ethertype validator in packet.py")
-def test_ethertype_bug_is_present() -> None:
-    with pytest.raises(ValueError):
+def test_packet_validation_rejects_ttl_one() -> None:
+    frame = EthernetFrame(
+        src_mac="00:11:22:33:44:55",
+        dst_mac="00:11:22:33:44:66",
+        ethertype=ETHERTYPE_IPV4,
+        payload=IPv4Header(src_ip="192.0.2.1", dst_ip="192.0.2.2", ttl=1),
+    )
+    assert "L3_INVALID_TTL" in frame.validate()
+
+
+def test_packet_validation_rejects_unsupported_but_in_range_ethertype() -> None:
+    frame = EthernetFrame(
+        src_mac="00:11:22:33:44:55",
+        dst_mac="00:11:22:33:44:66",
+        ethertype=0x86DD,
+        payload=IPv4Header(src_ip="192.0.2.1", dst_ip="192.0.2.2", ttl=64),
+    )
+    assert "L2_UNSUPPORTED_ETHERTYPE" in frame.validate()
+
+
+def test_packet_constructor_rejects_out_of_range_ethertype() -> None:
+    try:
         EthernetFrame(
             src_mac="00:11:22:33:44:55",
             dst_mac="00:11:22:33:44:66",
             ethertype=70000,
             payload=IPv4Header(src_ip="192.0.2.1", dst_ip="192.0.2.2", ttl=64),
         )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for out-of-range ethertype")
+
+
+def test_packet_constructor_rejects_reserved_vlan() -> None:
+    try:
+        EthernetFrame(
+            src_mac="00:11:22:33:44:55",
+            dst_mac="00:11:22:33:44:66",
+            ethertype=ETHERTYPE_IPV4,
+            payload=IPv4Header(src_ip="192.0.2.1", dst_ip="192.0.2.2", ttl=64),
+            vlan_id=4095,
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for reserved vlan")
 
 
 def test_interface_access_and_trunk_vlan_admission() -> None:

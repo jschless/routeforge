@@ -866,6 +866,15 @@ def _symbol_impl_status(obj: object) -> str:
     return "done"
 
 
+def _resolve_symbol_obj(module: object, symbol: str) -> object | None:
+    obj: object = module
+    for part in symbol.split("."):
+        obj = getattr(obj, part, None)
+        if obj is None:
+            return None
+    return obj
+
+
 def _cmd_hint(lab_id: str, symbol: str | None) -> int:
     import importlib
     import inspect
@@ -901,12 +910,7 @@ def _cmd_hint(lab_id: str, symbol: str | None) -> int:
         else:
             print("symbol summary:")
             for target_symbol in student_target.symbols:
-                parts = target_symbol.split(".")
-                obj: object = module
-                for part in parts:
-                    obj = getattr(obj, part, None)
-                    if obj is None:
-                        break
+                obj = _resolve_symbol_obj(module, target_symbol)
                 if obj is None:
                     print(f"  [missing] {target_symbol}")
                     continue
@@ -914,12 +918,7 @@ def _cmd_hint(lab_id: str, symbol: str | None) -> int:
             print()
 
         for target_symbol in selected_symbols:
-            parts = target_symbol.split(".")
-            obj: object = module
-            for part in parts:
-                obj = getattr(obj, part, None)
-                if obj is None:
-                    break
+            obj = _resolve_symbol_obj(module, target_symbol)
             if obj is None:
                 print(f"  {target_symbol}: (not found in module)")
                 continue
@@ -945,25 +944,104 @@ def _cmd_hint(lab_id: str, symbol: str | None) -> int:
     return 0
 
 
-def _find_contract_tests(target_path: str, _symbols: tuple[str, ...]) -> tuple[str, ...]:
+def _find_contract_tests(target_path: str, symbols: tuple[str, ...]) -> tuple[str, ...]:
     import ast
+    import importlib
 
     repo_root = Path(__file__).resolve().parents[2]
     contract_dir = repo_root / "tests" / "contract"
     module_name = target_path.removeprefix("src/").removesuffix(".py").replace("/", ".")
+    try:
+        target_module = importlib.import_module(module_name)
+    except Exception:
+        return ()
+    target_symbols = {
+        symbol: obj
+        for symbol in symbols
+        if (obj := _resolve_symbol_obj(target_module, symbol)) is not None
+    }
 
     matches: list[str] = []
     for test_file in sorted(contract_dir.glob("test_*.py")):
         tree = ast.parse(test_file.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.module == module_name:
-                matches.append(str(test_file.relative_to(repo_root)))
-                break
+            if isinstance(node, ast.ImportFrom):
+                if _import_from_matches_contract_target(
+                    node=node,
+                    module_name=module_name,
+                    target_symbols=target_symbols,
+                ):
+                    matches.append(str(test_file.relative_to(repo_root)))
+                    break
             if isinstance(node, ast.Import):
-                if any(alias.name == module_name for alias in node.names):
+                if _import_matches_contract_target(
+                    node=node,
+                    module_name=module_name,
+                    target_symbols=target_symbols,
+                ):
                     matches.append(str(test_file.relative_to(repo_root)))
                     break
     return tuple(matches)
+
+
+def _import_from_matches_contract_target(
+    *,
+    node: object,
+    module_name: str,
+    target_symbols: dict[str, object],
+) -> bool:
+    import ast
+    import importlib
+
+    if not isinstance(node, ast.ImportFrom):
+        return False
+    if node.module == module_name:
+        return True
+    if node.module is None:
+        return False
+    try:
+        module = importlib.import_module(node.module)
+    except Exception:
+        return False
+    if any(alias.name == "*" for alias in node.names):
+        return _module_exports_matching_target(module=module, target_symbols=target_symbols)
+    for alias in node.names:
+        target_obj = target_symbols.get(alias.name)
+        if target_obj is None:
+            continue
+        if _resolve_symbol_obj(module, alias.name) is target_obj:
+            return True
+    return False
+
+
+def _import_matches_contract_target(
+    *,
+    node: object,
+    module_name: str,
+    target_symbols: dict[str, object],
+) -> bool:
+    import ast
+    import importlib
+
+    if not isinstance(node, ast.Import):
+        return False
+    for alias in node.names:
+        if alias.name == module_name:
+            return True
+        try:
+            module = importlib.import_module(alias.name)
+        except Exception:
+            continue
+        if _module_exports_matching_target(module=module, target_symbols=target_symbols):
+            return True
+    return False
+
+
+def _module_exports_matching_target(*, module: object, target_symbols: dict[str, object]) -> bool:
+    for symbol, target_obj in target_symbols.items():
+        if _resolve_symbol_obj(module, symbol) is target_obj:
+            return True
+    return False
 
 
 def _cmd_debug_replay(trace_path: Path) -> int:

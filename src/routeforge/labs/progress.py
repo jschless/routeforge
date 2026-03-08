@@ -76,6 +76,16 @@ def _to_str_dict(value: Any, *, field_name: str) -> dict[str, str]:
     return out
 
 
+def _load_progress_state(raw: dict[str, Any]) -> ProgressState:
+    return ProgressState(
+        version=CURRENT_VERSION,
+        completed=_to_str_tuple(raw.get("completed", []), field_name="progress.completed"),
+        run_counts=_to_int_dict(raw.get("run_counts", {}), field_name="progress.run_counts"),
+        pass_counts=_to_int_dict(raw.get("pass_counts", {}), field_name="progress.pass_counts"),
+        last_result=_to_str_dict(raw.get("last_result", {}), field_name="progress.last_result"),
+    )
+
+
 def load_progress(path: Path | None = None) -> ProgressState:
     progress_path = path or DEFAULT_PROGRESS_PATH
     if not progress_path.exists():
@@ -92,30 +102,25 @@ def load_progress(path: Path | None = None) -> ProgressState:
     version = raw.get("version")
     if version is None:
         print(
-            "warning: progress file has no version metadata; treating as legacy format. "
-            "Run 'routeforge progress migrate' to upgrade."
+            "warning: progress file has no version metadata; loaded legacy state and will "
+            "upgrade it to the current format on next save. "
+            "Run 'routeforge progress migrate' to rewrite it now."
         )
-        return _empty_state()
+        return _load_progress_state(raw)
     if not isinstance(version, int):
         raise ValueError("progress.version must be an int")
     if version < CURRENT_VERSION:
         print(
-            f"warning: progress file version {version} is older than supported version {CURRENT_VERSION}. "
-            "Run 'routeforge progress migrate' to attempt upgrade."
+            f"warning: progress file version {version} is older than supported version {CURRENT_VERSION}; "
+            "loaded legacy state and will upgrade it to the current format on next save. "
+            "Run 'routeforge progress migrate' to rewrite it now."
         )
-        return _empty_state()
+        return _load_progress_state(raw)
     if version > CURRENT_VERSION:
         raise ValueError(
             f"progress.version {version} is newer than this CLI supports ({CURRENT_VERSION})"
         )
-
-    return ProgressState(
-        version=version,
-        completed=_to_str_tuple(raw.get("completed", []), field_name="progress.completed"),
-        run_counts=_to_int_dict(raw.get("run_counts", {}), field_name="progress.run_counts"),
-        pass_counts=_to_int_dict(raw.get("pass_counts", {}), field_name="progress.pass_counts"),
-        last_result=_to_str_dict(raw.get("last_result", {}), field_name="progress.last_result"),
-    )
+    return _load_progress_state(raw)
 
 
 def save_progress(state: ProgressState, path: Path | None = None) -> Path:
@@ -205,12 +210,8 @@ def migrate_progress(path: Path | None = None) -> Path:
     raw = json.loads(text)
     if not isinstance(raw, dict):
         raise ValueError("progress root must be a mapping")
-
-    migrated = ProgressState(
-        version=CURRENT_VERSION,
-        completed=_to_str_tuple(raw.get("completed", []), field_name="progress.completed"),
-        run_counts=_to_int_dict(raw.get("run_counts", {}), field_name="progress.run_counts"),
-        pass_counts=_to_int_dict(raw.get("pass_counts", {}), field_name="progress.pass_counts"),
-        last_result=_to_str_dict(raw.get("last_result", {}), field_name="progress.last_result"),
-    )
-    return save_progress(migrated, progress_path)
+    if isinstance(raw.get("version"), int) and raw["version"] > CURRENT_VERSION:
+        raise ValueError(
+            f"progress.version {raw['version']} is newer than this CLI supports ({CURRENT_VERSION})"
+        )
+    return save_progress(_load_progress_state(raw), progress_path)

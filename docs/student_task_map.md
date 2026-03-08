@@ -12,7 +12,7 @@ It prints `student.stage`, `student.target`, `student.symbols`, and `student.sum
 
 | Stage | Lab | File | Symbols |
 | --- | --- | --- | --- |
-| 1 | `lab01_frame_and_headers` | `src/routeforge/model/packet.py` | `is_valid_mac`, `IPv4Header.validate`, `EthernetFrame.validate` |
+| 1 | `lab01_frame_and_headers` | `src/routeforge/model/packet.py` | `is_valid_mac`, `IPv4Header.validate`, `EthernetFrame.__post_init__`, `EthernetFrame.validate` |
 | 2 | `lab02_mac_learning_switch` | `src/routeforge/runtime/dataplane_sim.py` | `DataplaneSim._determine_forwarding_plan` |
 | 3 | `lab03_vlan_and_trunks` | `src/routeforge/runtime/dataplane_sim.py` | `DataplaneSim._determine_egress_vlan_plan` |
 | 4 | `lab04_stp` | `src/routeforge/runtime/stp.py` | `compute_stp` |

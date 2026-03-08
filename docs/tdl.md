@@ -160,7 +160,7 @@ routeforge tdl progress show
 Notes:
 
 - `routeforge tdl run` persists progress in `~/.routeforge_tdl_progress.json` by default.
-- If the home-directory TDL progress file does not exist yet but a legacy local `.routeforge_tdl_progress.json` is present in your current working directory, the CLI warns and reuses that legacy file until you migrate it.
+- If the home-directory TDL progress file does not exist yet but a legacy local `.routeforge_tdl_progress.json` is present in your current working directory, the CLI warns, loads that legacy state, and upgrades it to the current format on the next save.
 - If prerequisites are not complete, the challenge prints `blocked`.
 - `routeforge tdl check all` runs the full TDL test suite.
 

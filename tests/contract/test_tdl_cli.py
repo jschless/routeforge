@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 
 from routeforge.cli import main
@@ -69,6 +70,35 @@ def test_tdl_run_without_state_file_updates_default_progress(monkeypatch, capsys
     show_output = capsys.readouterr().out
     assert f"tdl.completed: 1/{len(TDL_CHALLENGES)}" in show_output
     assert "tdl.xp: 100" in show_output
+
+
+def test_tdl_run_preserves_legacy_progress_and_upgrades_on_save(monkeypatch, tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr("routeforge.cli.run_tdl_challenge", _passing_tdl_result)
+    state = tmp_path / "legacy-tdl-progress.json"
+    state.write_text(
+        json.dumps(
+            {
+                "completed": ["tdl_auto_01_yang_path_validation"],
+                "total_xp": 100,
+                "badges": [],
+                "run_counts": {"tdl_auto_01_yang_path_validation": 1},
+                "pass_counts": {"tdl_auto_01_yang_path_validation": 1},
+                "last_result": {"tdl_auto_01_yang_path_validation": "PASS"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert main(["tdl", "run", "tdl_auto_02_netconf_edit_merge_replace", "--state-file", str(state)]) == 0
+    output = capsys.readouterr().out
+    assert "loaded legacy state" in output
+    payload = json.loads(state.read_text(encoding="utf-8"))
+    assert payload["version"] == 1
+    assert payload["completed"][:2] == [
+        "tdl_auto_01_yang_path_validation",
+        "tdl_auto_02_netconf_edit_merge_replace",
+    ]
+    assert payload["total_xp"] == 200
 
 
 def test_tdl_check_command_rejects_unknown_target(capsys) -> None:
