@@ -4,9 +4,22 @@ TDL means **Test Driven Learning**.
 
 It is an optional gamified side-quest track that covers CCNP-adjacent topics not in the core lab chain. Where core labs (lab01–lab39) teach end-to-end protocol workflows, TDL isolates individual concepts into short, focused challenges.
 
+## Unlocking TDL (Read This First)
+
+TDL unlocks automatically after you complete **lab27_capstone_incident_drill**.
+
+Until then, `routeforge tdl list` will show most entries as `LOCKED`, even if the
+challenge code and tests exist in the repository. This is expected behavior.
+
+Fast unlock check:
+
+1. complete `lab27_capstone_incident_drill`
+2. run `routeforge tdl list`
+3. verify first mission in each domain shows `UNLOCKED`
+
 ## What TDL Covers
 
-TDL challenges span five domains that extend beyond the core curriculum:
+TDL challenges span six domains that extend beyond the core curriculum:
 
 | Domain | Topics |
 |---|---|
@@ -16,6 +29,78 @@ TDL challenges span five domains that extend beyond the core curriculum:
 | **Routing Policy** | Prefix lists, route-map sequences, BGP community policy, local-pref/MED transforms |
 | **MPLS** | LDP label allocation, PHP forwarding, L3VPN RT import/export, VPNv4 next-hop reachability |
 | **Resiliency** | HSRP priority tracking, BFD flap dampening, IS-IS LSP pacing, graceful restart |
+
+## Domain Primers
+
+### Automation
+
+Automation missions model network configuration as structured data, not CLI text.
+Before starting this domain, make sure you understand that YANG defines schema,
+NETCONF applies structured edits to that schema, and RESTCONF exposes similar
+operations over REST semantics. In practical terms: a path is valid only if it
+matches the model shape, merge/replace operations must be deterministic, and
+idempotence means applying the same patch twice should not create additional
+state drift. In closed-loop workflows, config drift detection compares intended
+state to observed state and emits specific remediation actions. Think in terms
+of state transitions and invariants, not command-by-command diffs.
+
+### Multicast
+
+Multicast missions focus on control-plane correctness before forwarding scale.
+Key prerequisite ideas: RPF checks validate that traffic arrived on the expected
+upstream path, PIM DR election picks one designated router per segment with
+deterministic tie-breaks, and IGMP snooping tracks listener membership over time.
+RP mapping then connects group ranges to rendezvous points for shared-tree
+construction. If you are rusty, review `(*,G)` vs `(S,G)` behavior and why
+membership aging matters for pruning stale entries. A useful mindset is to treat
+multicast forwarding as constrained distribution: every branch decision should
+be explainable by upstream reachability plus downstream interest.
+
+### Wireless
+
+Wireless missions emphasize finite-state behavior and classification decisions.
+Client join workflows (auth/assoc/ready) are modeled as explicit FSM transitions,
+so illegal transitions should be rejected deterministically. Channel conflict
+scoring and roaming decisions combine signal quality with hysteresis and policy
+guardrails; the point is reproducible decisioning under noisy inputs. WMM queue
+mapping ties traffic class intent to service queues, so correctness is mostly
+about consistent class-to-queue mapping and tie-breaks. Approach these missions
+as control logic problems: define valid state, identify transition triggers, and
+keep policy outcomes stable when inputs are equal.
+
+### Routing Policy
+
+Routing policy missions model how engineers control route propagation. Prefix
+lists are match primitives; route maps are ordered pipelines where first match
+wins and implicit deny exists unless explicitly overridden. Community handling
+adds metadata-driven policy, while local-pref and MED transformations influence
+best-path outcomes at different scopes (intra-AS vs inter-AS influence). Before
+starting, be comfortable with exact/longer-prefix match behavior and sequence
+ordering effects. A reliable implementation pattern is: normalize input, evaluate
+match conditions in deterministic order, then apply set actions once. Avoid
+implicit side effects; policy chains should be transparent and replayable.
+
+### MPLS
+
+MPLS missions focus on label lifecycle and VPN control boundaries. LDP label
+allocation requires deterministic mapping and stable reuse; PHP decisions control
+where label popping occurs to simplify downstream forwarding. L3VPN RT import/
+export determines tenant route visibility, and VPNv4 next-hop reachability gates
+whether a control-plane route can safely install. If MPLS is rusty, review LIB
+vs LFIB roles, swap/pop/push actions, and route-target semantics for VRF import
+policy. Treat each mission as a pipeline stage: allocate, program, decide import,
+then verify forwarding intent matches control-plane constraints.
+
+### Resiliency
+
+Resiliency missions model failure handling with predictable convergence behavior.
+HSRP tracking recomputes priority from object health; BFD dampening prevents
+state thrash under flap storms; IS-IS pacing smooths control bursts; graceful
+restart logic decides when to retain or withdraw stale paths. The core concept is
+not just \"fail fast\" but \"recover predictably\". Inputs may oscillate, but policy
+must avoid unstable loops and repeated churn. When implementing these missions,
+focus on timer and threshold boundaries, explicit suppression conditions, and
+clear reasons for state transitions so incident triage remains explainable.
 
 ## Missions vs Bosses
 

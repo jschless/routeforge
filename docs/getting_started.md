@@ -159,6 +159,9 @@ Use this order:
 2. explain one failing step
 3. compare with tutorial chapter expected checkpoints
 
+For a full end-to-end debugging example and checkpoint glossary, see
+[Debug Playbook](debug_playbook.md).
+
 ## Where To Find Targets and Walkthroughs
 
 - Lab-by-lab coding targets: [student_task_map.md](student_task_map.md)

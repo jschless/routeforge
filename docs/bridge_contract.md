@@ -1,5 +1,9 @@
 # RouteForge Bridge Contract (v1)
 
+> **Advanced/optional:** this document describes the target Phase 3
+> multi-simulator architecture. Labs 01-39 call protocol functions directly.
+> Skip this unless you want the long-term design context.
+
 Status: Draft  
 Date: 2026-03-07
 

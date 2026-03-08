@@ -13,10 +13,12 @@ theme:
 nav:
   - Home: index.md
   - Getting Started: getting_started.md
+  - Debug Playbook: debug_playbook.md
   - TDL Side Quests: tdl.md
   - Student Task Map: student_task_map.md
   - Function Contracts: function_contracts.md
   - Architecture:
+      - Overview: architecture.md
       - Redesign: routeforge_redesign.md
       - Bridge Contract: bridge_contract.md
       - Execution Plan: execution_plan.md
